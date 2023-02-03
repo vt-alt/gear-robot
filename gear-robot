@@ -55,6 +55,14 @@ while [ $# -gt 0 ]; do
 	shift
 done
 
+# Update repos
+if [ -v gears_update ]; then
+	# Add, update, and rebase over gears repo.
+	V git gears-add
+	# Show extra commits we have, should be none in normal circumstances.
+	git l "gears/${branch-sisyphus}.."
+fi
+
 export disable_specsubst=1
 chdir_to_toplevel
 guess_specfile
@@ -68,42 +76,14 @@ gear_describe() {
 }
 gear_describe
 
-# Update repos
-V git fetch origin
-if [ -v gears_update ]; then
-	V git gears-add
-	git l "gears/${branch-sisyphus}.."
-fi
+find_watchfile() {
+	for WATCH in .gear/$NAME*.watch $NAME*.watch .gear/autobuild.watch .gear/*.watch *.watch ; do
+		[ -e "$WATCH" ] && break
+		WATCH=
+	done
+}
 
-# Find latest (merged) upstream tag in this branch
-unset oldtag
-while read -r tag; do
-	case "$tag" in
-		@ | gb-*-task* | *-alt*) continue ;;
-	esac
-	oldtag=$tag
-	echo "Latest merged tag is $oldtag"
-	break
-done < <(git tag --sort=-creatordate --merged @)
-
-# Find new tags
-tags=()
-while read -r tag; do
-	[[ $tag =~ -alt|^gb-|rc|beta|alpha ]] && continue
-	# --is-ancestor: Check if the first <commit> is an ancestor of the second <commit>, and exit with status 0 if true.
-	git merge-base --is-ancestor "$tag" HEAD && break
-	# Consider only tags in this branch
-	# [ -v oldtag ] && { git merge-base --is-ancestor "$oldtag" "$tag" || continue; }
-	tags+=( "$tag" )
-done < <(git tag --sort=-creatordate -l)
-
-case ${#tags[@]} in
-	0) warn "No new tags."; tag= ;;
-	1) tag=$tags ;;
-	*) tag=$(gum choose -- "${tags[@]}") ;;
-esac
-echo "Selected tag: $tag"
-
+find_watchfile
 # Prepare GPG
 export GNUPGHOME=.gear/.gnupg
 rm -rf "$GNUPGHOME"
@@ -162,59 +142,99 @@ acquire_gpg_key() {
 	V git commit -m "ALT: Import GPG key for $who" -m "$gpg_command"
 }
 
-# Have tag to merge.
-if [ -n "$tag" ]; then
-	msg=
-	cleanup=
-	if [ -v nosignature ]; then
-		warn "Signature check skipped."
-		tagstate=nosignature
-	elif git cat-file -p "$tag" | grep -q 'BEGIN PGP SIGNATURE'; then
-		acquire_gpg_key "$tag"
-		# Hide:
-		#   gpg: WARNING: Using untrusted key!
-		echo "quiet" >> $GNUPGHOME/gpg.conf
-		if [ "$(git cat-file -t "$tag")" = commit ]; then
-			V git verify-commit "$tag"
-			msg=.git/COMMIT_EDITMSG
-			printf -- "Merge signed commit '%s' into %s\n\n%s" \
-				"$tag" \
-				"$(git branch --show-current)" \
-				"$(git verify-commit "$tag" |& sed 's/^/# /')" > $msg
-			cleanup=--cleanup=whitespace
-		else
-			# In case of signed tag git-merge adds message automatically.
-			V git verify-tag "$tag"
-		fi
-		tagstate=VERIFIED
-	else
-		warn "Lame upstream, tag is not signed."
-		tagstate=unsigned
-	fi
+update_from_git_origin() {
+	V git fetch origin
 
-	# shellcheck disable=SC2086
-	if ! V git merge --progress $cleanup $theirs --no-edit ${msg:+-F "$msg"} "$tag"; then
-		if [ -t 0 ]; then
-			# Try manual merge if user is here.
-			GIT_PS1_SHOWCOLORHINTS=true \
-			GIT_PS1_SHOWDIRTYSTATE=true \
-			PS1='\w\[\033[1;35m\]$(__git_ps1)\[\033[m\]> ' \
-			bash --rcfile <(cat ~/.bashrc; echo . /usr/share/git-core/contrib/completion/git-prompt.sh) || :
+	# Find latest (merged) upstream tag in this branch
+	unset oldtag
+	while read -r tag; do
+		case "$tag" in
+			@ | gb-*-task* | *-alt*) continue ;;
+		esac
+		oldtag=$tag
+		echo "Latest merged tag is $oldtag"
+		break
+	done < <(git tag --sort=-creatordate --merged @)
+
+	# Find new tags
+	tags=()
+	while read -r tag; do
+		[[ $tag =~ -alt|^gb-|rc|beta|alpha ]] && continue
+		# --is-ancestor: Check if the first <commit> is an ancestor of the second <commit>, and exit with status 0 if true.
+		git merge-base --is-ancestor "$tag" HEAD && break
+		# Consider only tags in this branch
+		# [ -v oldtag ] && { git merge-base --is-ancestor "$oldtag" "$tag" || continue; }
+		tags+=( "$tag" )
+	done < <(git tag --sort=-creatordate -l)
+
+	case ${#tags[@]} in
+		0) warn "No new tags."; tag= ;;
+		1) tag=$tags ;;
+		*) tag=$(gum choose -- "${tags[@]}") ;;
+	esac
+	echo "Selected tag: $tag"
+
+	# Have tag to merge.
+	if [ -n "$tag" ]; then
+		msg=
+		cleanup=
+		if [ -v nosignature ]; then
+			warn "Signature check skipped."
+			tagstate=nosignature
+		elif git cat-file -p "$tag" | grep -q 'BEGIN PGP SIGNATURE'; then
+			acquire_gpg_key "$tag"
+			# Hide:
+			#   gpg: WARNING: Using untrusted key!
+			echo "quiet" >> $GNUPGHOME/gpg.conf
+			if [ "$(git cat-file -t "$tag")" = commit ]; then
+				V git verify-commit "$tag"
+				msg=.git/COMMIT_EDITMSG
+				printf -- "Merge signed commit '%s' into %s\n\n%s" \
+					"$tag" \
+					"$(git branch --show-current)" \
+					"$(git verify-commit "$tag" |& sed 's/^/# /')" > $msg
+				cleanup=--cleanup=whitespace
+			else
+				# In case of signed tag git-merge adds message automatically.
+				V git verify-tag "$tag"
+			fi
+			tagstate=VERIFIED
+		else
+			warn "Lame upstream, tag is not signed."
+			tagstate=unsigned
+		fi
+
+		# shellcheck disable=SC2086
+		if ! V git merge --progress $cleanup $theirs --no-edit ${msg:+-F "$msg"} "$tag"; then
+			if [ -t 0 ]; then
+				# Try manual merge if user is here.
+				GIT_PS1_SHOWCOLORHINTS=true \
+				GIT_PS1_SHOWDIRTYSTATE=true \
+				PS1='\w\[\033[1;35m\]$(__git_ps1)\[\033[m\]> ' \
+				bash --rcfile <(cat ~/.bashrc; echo . /usr/share/git-core/contrib/completion/git-prompt.sh) || :
+			fi
+		else
+			if [ -n "$theirs" ]; then
+				git commit --no-edit --amend --trailer "Merge-Strategy: theirs"
+			fi
+		fi
+		if git diff --quiet &&
+		   git diff --quiet --cached &&
+		   git merge-base --is-ancestor "$tag" HEAD; then
+			info "Merge OK. Continuing..."
+		else
+			fatal "Merge failed!"
 		fi
 	else
-		if [ -n "$theirs" ]; then
-			git commit --no-edit --amend --trailer "Merge-Strategy: theirs"
-		fi
+		tagstate=unknown
 	fi
-	if git diff --quiet &&
-	   git diff --quiet --cached &&
-	   git merge-base --is-ancestor "$tag" HEAD; then
-		info "Merge OK. Continuing..."
-	else
-		fatal "Merge failed!"
-	fi
+}
+
+# Update upstream code.
+if [ -n "$WATCH" ]; then
+	V rpm-uscan --watchfile="$WATCH" --force-action=gear-uupdate
 else
-	tagstate=unknown
+	update_from_git_origin
 fi
 
 git rev-parse @^2 >/dev/null 2>&1 || fatal "Not in a merge commit."
@@ -235,6 +255,7 @@ futag=$ver-alt1
 [ -z "$force" ] && [ -n "$(git tag -l "$futag")" ] \
 	&& fatal "Future tag $futag already exists (--force to skip this check)."
 
+# Make sure we have newer version than that in repo.
 if [ -d /ALT/ ]; then
 	repo=${branch-Sisyphus}
 	srpm=( "/ALT/$repo/files/SRPMS/$NAME-+([^-])-+([^-]).src.rpm" )
