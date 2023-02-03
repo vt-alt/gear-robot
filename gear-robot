@@ -1,6 +1,9 @@
 #!/bin/bash
+#
 # Easy-peasy single command robot-bobot package update script
-# Copyright (c) 2022 Vitaly Chikunov <vt@altlinux.org>
+#
+# Copyright (c) 2022-2023 Vitaly Chikunov <vt@altlinux.org>
+# SPDX-License-Identifier: GPL-2.0-only
 #
 # shellcheck disable=SC2128,SC2207
 
@@ -69,7 +72,7 @@ gear_describe
 V git fetch origin
 if [ -v gears_update ]; then
 	V git gears-add
-	git l gears/${branch-sisyphus}..
+	git l "gears/${branch-sisyphus}.."
 fi
 
 # Find latest (merged) upstream tag in this branch
@@ -129,15 +132,18 @@ acquire_gpg_key() {
 		echo >&2 "GPG key is known."
 		return
 	fi
-	local object_type=$(git cat-file -t "$tag")
+	local object_type
+	object_type=$(git cat-file -t "$tag")
 	git cat-file -p "$tag" | grep -e committer -e tagger
 	echo "git verify-$object_type $tag" > .gear/GIT_VERIFY_OUTPUT
-	git verify-$object_type "$tag" >> .gear/GIT_VERIFY_OUTPUT 2>&1 || :
+	git "verify-$object_type" "$tag" >> .gear/GIT_VERIFY_OUTPUT 2>&1 || :
 	keyid=$(grep -Po "^gpg:\s+using \S+ key \K.*" .gear/GIT_VERIFY_OUTPUT)
 	[ -n "$keyid" ] || fatal "No keyid to find."
 	# --receive-keys cannot receive unapproved keys: https://keys.openpgp.org/about/faq#older-gnupg
 	gpg_command="gpg2 $keyserver --receive-keys $keyid"
+	# shellcheck disable=SC2086
 	V $gpg_command |& tee -a .gear/GIT_VERIFY_OUTPUT
+	# shellcheck disable=SC2155
 	local who=$(grep -Po '^gpg: key \S+: public key "\K[^"]+(?=" imported)' .gear/GIT_VERIFY_OUTPUT)
 	[ -n "$who" ] || fatal "Key is not imported."
 	V gpg2 --list-keys
@@ -176,6 +182,7 @@ if [ -n "$tag" ]; then
 		tagstate=unsigned
 	fi
 
+	# shellcheck disable=SC2086
 	if ! V git merge --progress $cleanup $theirs --no-edit ${msg:+-F "$msg"} "$tag"; then
 		if [ -t 0 ]; then
 			# Try manual merge if user is here.
@@ -220,7 +227,7 @@ futag=$ver-alt1
 
 if [ -d /ALT/ ]; then
 	repo=${branch-Sisyphus}
-	srpm=( /ALT/$repo/files/SRPMS/$NAME-+([^-])-+([^-]).src.rpm )
+	srpm=( "/ALT/$repo/files/SRPMS/$NAME-+([^-])-+([^-]).src.rpm" )
 	suff=${srpm%-*-*.src.rpm}
 	revr=${srpm#"$suff-"}
 	revr=${revr%.src.rpm}
@@ -256,6 +263,7 @@ if [ -f Cargo.toml ]; then
 	git add -f Cargo.lock
 elif [ -f go.mod ]; then
 	cmd="go mod vendor"
+	# shellcheck disable=SC2086
 	V $cmd
 fi
 if [ -n "$cmd" ] && [ -d vendor ]; then
