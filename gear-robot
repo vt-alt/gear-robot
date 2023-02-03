@@ -77,7 +77,7 @@ gear_describe() {
 gear_describe
 
 find_watchfile() {
-	for WATCH in .gear/$NAME*.watch $NAME*.watch .gear/autobuild.watch .gear/*.watch *.watch ; do
+	for WATCH in .gear/"$NAME"*.watch "$NAME"*.watch .gear/autobuild.watch .gear/*.watch *.watch ; do
 		[ -e "$WATCH" ] && break
 		WATCH=
 	done
@@ -232,23 +232,72 @@ update_from_git_origin() {
 
 # Update upstream code.
 if [ -n "$WATCH" ]; then
-	V rpm-uscan --watchfile="$WATCH" --force-action=gear-uupdate
+	# rpm-uscan will download and verify signature (based on .watch file)
+	# but will not record result of verification anywhere (except stdout),
+	# so we will need to verify it again.
+	printf '$ rpm-uscan --watchfile=%q\n' "$WATCH" > .gear/IMPORT_OUTPUT
+	set +e
+	V rpm-uscan --watchfile="$WATCH"
+	RET=$?
+	set -e
+	query=$(uscan-query -a "$WATCH" 2>/dev/null | sed 's/[[:space:]]/_/g' || :)
+	# shellcheck disable=SC2086
+	[ -n "$query" ] && declare $query
+	[ -v STATUS ] || STATUS="uscan-query error"
+	if [ "$RET" -eq 0 ]; then
+		warn "Status: ${STATUS//_/ }"
+	else
+		fatal "Nothign to update (${STATUS//_/ })"
+	fi
+
+	printf '$ sha256sum %q\n' "$FILENAME" >> .gear/IMPORT_OUTPUT
+	V sha256sum "$FILENAME" | tee -a .gear/IMPORT_OUTPUT
+
+	if [ -e "$FILENAME.asc" ]; then
+		echo "quiet" >> $GNUPGHOME/gpg.conf
+		echo "$ gpg2 --verify $FILENAME.asc" >> .gear/IMPORT_OUTPUT
+		V gpg2 --verify "$FILENAME.asc"
+		gpg2 --verify "$FILENAME.asc" >> .gear/IMPORT_OUTPUT 2>&1
+		tagstate=VERIFIED
+	else
+		tagstate=unsigned
+	fi
+	printf '$ gear-import --no-tag %q\n' "$FILENAME" >> .gear/IMPORT_OUTPUT
+	gear-import --no-tag "$FILENAME"
+	{
+		# Amend to append import relevant info.
+		git log --format=%B -n1
+		cat .gear/IMPORT_OUTPUT
+		printf '\nLink: %s\n' "$URL"
+		curl -s -I "$URL" | grep -i -e ^last-modified: -e ^etag:
+	} | git commit -q --amend -F-
 else
 	update_from_git_origin
+	git rev-parse @^2 >/dev/null 2>&1 || fatal "Not in a merge commit."
 fi
 
-git rev-parse @^2 >/dev/null 2>&1 || fatal "Not in a merge commit."
 git cat-file -p @ | grep -q '^committer .*@altlinux.org>' || fatal "Foreign merge commit."
 
-# What tag is merged?
-tags=( $(git tag --points-at @^2) )
-case ${#tags[@]} in
-	0) fatal "No tags at HEAD." ;;
-	1) tag=$tags ;;
-	*) warn "Too many tags pointing at HEAD: ${tags[*]}" ;;
-esac
-ver=${tag#*[Vv]}
-info "Top tag is $tag ($tagstate), Version: $ver"
+# Continue after we have merged upstream sources.
+if [ -n "$WATCH" ]; then
+	log=$(git log --format=%s -n1)
+	case "$log" in
+		Import?archive?*-*) ver=${log##*-} ;;
+		*) fatal "No import message in top commit: '$log'."
+	esac
+	info "Top commit version $ver ($tagstate)."
+	unset tag
+else
+	# What tag is merged?
+	tags=( $(git tag --points-at @^2) )
+	case ${#tags[@]} in
+		0) fatal "No tags at HEAD." ;;
+		1) tag=$tags ;;
+		*) warn "Too many tags pointing at HEAD: ${tags[*]}" ;;
+	esac
+	ver=${tag#*[Vv]}
+	info "Top tag is $tag ($tagstate), Version: $ver"
+fi
 [[ "$ver" =~ ^[[:digit:]]+(.[[:digit:]]+)*$ ]] || fatal "Unknown version format: $ver"
 
 futag=$ver-alt1
@@ -319,8 +368,14 @@ case $(rpmvercmp "$ver" $sver) in
 esac
 
 # Modify spec.
-new_tag_date=$(git log -1 --pretty=format:%cd --date=format:%Y-%m-%d "$tag")
-append_changelog="- Update to $tag ($new_tag_date)."
+if [ -v tag ]; then
+	new_tag_date=$(git log -1 --pretty=format:%cd --date=format:%Y-%m-%d "$tag")
+	append_changelog="- Update to $tag ($new_tag_date)."
+else
+	# gear-impor sets author date to archive mtime.
+	new_ver_date=$(git log -1 --pretty=format:%ad --date=format:%Y-%m-%d)
+	append_changelog="- Update to $ver ($new_ver_date)."
+fi
 sed -i -E "s/^Version:.*/Version: $ver/" "$specfile"
 sed -i -E "s/^Release:.*/Release: alt1/" "$specfile"
 safe-add-changelog -e "$append_changelog" "$specfile"
