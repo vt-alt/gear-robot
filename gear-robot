@@ -115,15 +115,25 @@ cp -a ~/.gnupg/gpg.conf $GNUPGHOME/
 #   gpg: WARNING: This key is not certified with a trusted signature!
 #   gpg:          There is no indication that the signature belongs to the owner.
 echo "trust-model always" >> $GNUPGHOME/gpg.conf
-GPGKEYS=.gear/keys.gpg
 if [ -v nosignature ]; then
 	warn "Importing gpg keys skipped."
 	# Call 'gpg' to initialize keyring, or else it will add to commit message:
 	# "gpg: keybox '/home/vt/src/libkdumpfile/.gear/.gnupg/pubring.kbx' created"
 	gpg2 --list-keys >/dev/null 2>&1
-elif [ -e "$GPGKEYS" ]; then
-	declare -p GNUPGHOME
-	V gpg2 --quiet --import "$GPGKEYS"
+else
+	if [ -e .gear/keys.gpg ] && [ ! -e .gear/upstream-signing-key.asc ]; then
+		V git mv .gear/keys.gpg .gear/upstream/signing-key.asc
+		V git commit -m "ALT: Rename GPG keys to be compatible with uscan"
+	fi
+	# Find upstream signing key.
+	for GPGKEYS in {{.gear,.}/upstream-,debian/upstream/}signing-key.asc; do
+		[ -e "$GPGKEYS" ] && break
+		GPGKEYS=
+	done
+	if [ -e "$GPGKEYS" ]; then
+		declare -p GNUPGHOME
+		V gpg2 --quiet --import "$GPGKEYS"
+	fi
 fi
 
 acquire_gpg_key() {
