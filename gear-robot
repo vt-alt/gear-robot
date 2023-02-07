@@ -36,7 +36,7 @@ info() {
 force='' build='' push='' commit='' theirs=''
 gears_update=y
 keyserver="--auto-key-locate wkd"
-unset nosignature
+unset nosignature keyurl
 while [ $# -gt 0 ]; do
 	opt=$1
 	case "$opt" in
@@ -49,6 +49,7 @@ while [ $# -gt 0 ]; do
 		--all) build=y push=y commit=--commit ;;
 		--keyserver=ubuntu) keyserver="--keyserver hkps://keyserver.ubuntu.com" ;;
 		--keyserver) shift; keyserver="--keyserver $1" ;;
+		--key=*) keyurl=${opt#*=} ;;
 		--nosignature) nosignature=y ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
@@ -118,27 +119,38 @@ fi
 
 acquire_gpg_key() {
 	local tag=$1
-	if [ -e .gear/keys.gpg ]; then
+	if [ -e .gear/upstream-signing-key.asc ]; then
 		echo >&2 "GPG key is known."
 		return
 	fi
 	local object_type
-	object_type=$(git cat-file -t "$tag")
-	git cat-file -p "$tag" | grep -e committer -e tagger
-	echo "git verify-$object_type $tag" > .gear/GIT_VERIFY_OUTPUT
-	git "verify-$object_type" "$tag" >> .gear/GIT_VERIFY_OUTPUT 2>&1 || :
-	keyid=$(grep -Po "^gpg:\s+using \S+ key \K.*" .gear/GIT_VERIFY_OUTPUT)
-	[ -n "$keyid" ] || fatal "No keyid to find."
-	# --receive-keys cannot receive unapproved keys: https://keys.openpgp.org/about/faq#older-gnupg
-	gpg_command="gpg2 $keyserver --receive-keys $keyid"
-	# shellcheck disable=SC2086
-	V $gpg_command |& tee -a .gear/GIT_VERIFY_OUTPUT
+	if [ -v keyurl ]; then
+		curl -sSL "$keyurl" | V gpg2 --import |& tee .gear/GPG_IMPORT_OUTPUT
+		gpg_command="Link: $keyurl"
+	else
+		object_type=$(git cat-file -t "$tag")
+		# Extrat required keyid from signature.
+		git cat-file -p "$tag" | grep -e committer -e tagger
+		echo "git verify-$object_type $tag" > .gear/GIT_VERIFY_OUTPUT
+		git "verify-$object_type" "$tag" >> .gear/GIT_VERIFY_OUTPUT 2>&1 || :
+		keyid=$(grep -Po "^gpg:\s+using \S+ key \K.*" .gear/GIT_VERIFY_OUTPUT)
+		[ -n "$keyid" ] || fatal "No keyid to find."
+		rm .gear/GIT_VERIFY_OUTPUT
+
+		# --receive-keys cannot receive unapproved keys: https://keys.openpgp.org/about/faq#older-gnupg
+		gpg_command="gpg2 $keyserver --receive-keys $keyid"
+		# shellcheck disable=SC2086
+		V $gpg_command |& tee .gear/GPG_IMPORT_OUTPUT
+	fi
+
 	# shellcheck disable=SC2155
-	local who=$(grep -Po '^gpg: key \S+: public key "\K[^"]+(?=" imported)' .gear/GIT_VERIFY_OUTPUT)
+	local who=$(grep -m1 -Po '^gpg: key \S+: public key "\K[^"]+(?=" imported)' .gear/GPG_IMPORT_OUTPUT)
 	[ -n "$who" ] || fatal "Key is not imported."
+	rm .gear/GPG_IMPORT_OUTPUT
+
 	V gpg2 --list-keys
-	V gpg2 --export -a > .gear/keys.gpg
-	V git add -f .gear/keys.gpg
+	V gpg2 --export --export-options export-minimal -a > .gear/upstream-signing-key.asc
+	V git add -f .gear/upstream-signing-key.asc
 	V git commit -m "ALT: Import GPG key for $who" -m "$gpg_command"
 }
 
