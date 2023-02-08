@@ -227,7 +227,7 @@ update_from_git_origin() {
 			fi
 		else
 			if [ -n "$theirs" ]; then
-				git commit --no-edit --amend --trailer "Merge-Strategy: theirs"
+				V git commit --no-edit --amend --trailer "Merge-Strategy: theirs"
 			fi
 		fi
 		if git diff --quiet &&
@@ -282,7 +282,7 @@ if [ -n "$WATCH" ]; then
 		cat .gear/IMPORT_OUTPUT
 		printf '\nLink: %s\n' "$URL"
 		curl -s -I "$URL" | grep -i -e ^last-modified: -e ^etag:
-	} | git commit -q --amend -F-
+	} | V git commit -q --amend -F-
 else
 	update_from_git_origin
 	git rev-parse @^2 >/dev/null 2>&1 || fatal "Not in a merge commit."
@@ -353,7 +353,7 @@ if [ -f Cargo.toml ]; then
 			-delete
 		# Except: *.obj
 	fi
-	git add -f Cargo.lock
+	V git add -f Cargo.lock
 elif [ -f go.mod ]; then
 	cmd="go mod vendor"
 	# shellcheck disable=SC2086
@@ -398,8 +398,8 @@ safe-add-changelog -e "$append_changelog" "$specfile"
 
 # Tag.
 git diff
-git add -f "$specfile"
-gear-commit --no-edit
+V git add -f "$specfile"
+V gear-commit --no-edit
 git l --first-parent  -3
 unset GNUPGHOME
 setsid gear-create-tag $force
