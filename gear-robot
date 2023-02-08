@@ -307,7 +307,8 @@ else
 		1) tag=$tags ;;
 		*) warn "Too many tags pointing at HEAD: ${tags[*]}" ;;
 	esac
-	ver=${tag#*[Vv]}
+	ver=${tag##*-}
+	ver=${ver#*[Vv]}
 	info "Top tag is $tag ($tagstate), Version: $ver"
 fi
 [[ "$ver" =~ ^[[:digit:]]+(.[[:digit:]]+)*$ ]] || fatal "Unknown version format: $ver"
