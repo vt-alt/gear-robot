@@ -103,7 +103,7 @@ if [ -v nosignature ]; then
 	gpg2 --list-keys >/dev/null 2>&1
 else
 	if [ -e .gear/keys.gpg ] && [ ! -e .gear/upstream-signing-key.asc ]; then
-		V git mv .gear/keys.gpg .gear/upstream/signing-key.asc
+		V git mv .gear/keys.gpg .gear/upstream-signing-key.asc
 		V git commit -m "ALT: Rename GPG keys to be compatible with uscan"
 	fi
 	# Find upstream signing key.
