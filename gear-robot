@@ -347,11 +347,11 @@ if [ -f Cargo.toml ]; then
 	else
 		cmd="cargo vendor"
 		V cargo vendor --quiet
-		# Delete windows' garbage.
-		V find vendor \( -path '*win*' -o -path '*vcpkg*' \) \
-			\( -name '*.a' -o -name '*.lib' -o -name '*.exe' \) \
-			-delete
-		# Except: *.obj
+		# Delete garbage.
+		V find vendor/ \( -name '*.a' -o -name '*.lib' -o -name '*.dll' -o -name '*.obj' \) -delete
+		# No verbose output cuz too much .cargo-checksum.json-s
+		# shellcheck disable=SC2046
+		sed -Ei 's!,"[^"]+\.(a|lib|dll|obj)":"[^"]+"!!g' $(find vendor -name .cargo-checksum.json)
 	fi
 	V git add -f Cargo.lock
 elif [ -f go.mod ]; then
