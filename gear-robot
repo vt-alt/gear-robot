@@ -50,7 +50,7 @@ while [ $# -gt 0 ]; do
 		--keyserver=ubuntu) keyserver="--keyserver hkps://keyserver.ubuntu.com" ;;
 		--keyserver) shift; keyserver="--keyserver $1" ;;
 		--key=*) keyurl=${opt#*=} ;;
-		--nosignature) nosignature=y ;;
+		--nosig* | --no-sig*) nosignature=y ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
