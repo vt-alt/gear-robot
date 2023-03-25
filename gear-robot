@@ -36,7 +36,7 @@ info() {
 force='' build='' push='' commit='' theirs=''
 gears_update=y
 keyserver="--auto-key-locate wkd"
-unset nosignature keyurl
+unset nosignature keyurl readtreemerge
 while [ $# -gt 0 ]; do
 	opt=$1
 	case "$opt" in
@@ -51,6 +51,7 @@ while [ $# -gt 0 ]; do
 		--keyserver) shift; keyserver="--keyserver $1" ;;
 		--key=*) keyurl=${opt#*=} ;;
 		--nosig* | --no-sig*) nosignature=y ;;
+		--read-tree) readtreemerge=y ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -188,7 +189,8 @@ update_from_git_origin() {
 
 	# Have tag to merge.
 	if [ -n "$tag" ]; then
-		msg=
+		msg=".git/COMMIT_EDITMSG"
+		printf "Merge tag '%s' into %s" "$tag" "$(git branch --show-current)" > "$msg"
 		cleanup=
 		if [ -v nosignature ]; then
 			warn "Signature check skipped."
@@ -200,11 +202,10 @@ update_from_git_origin() {
 			echo "quiet" >> $GNUPGHOME/gpg.conf
 			if [ "$(git cat-file -t "$tag")" = commit ]; then
 				V git verify-commit "$tag"
-				msg=.git/COMMIT_EDITMSG
 				printf -- "Merge signed commit '%s' into %s\n\n%s" \
 					"$tag" \
 					"$(git branch --show-current)" \
-					"$(git verify-commit "$tag" |& sed 's/^/# /')" > $msg
+					"$(git verify-commit "$tag" |& sed 's/^/# /')" > "$msg"
 				cleanup=--cleanup=whitespace
 			else
 				# In case of signed tag git-merge adds message automatically.
@@ -216,8 +217,14 @@ update_from_git_origin() {
 			tagstate=unsigned
 		fi
 
+		# Actual merges.
 		# shellcheck disable=SC2086
-		if ! V git merge --progress $cleanup $theirs --no-edit ${msg:+-F "$msg"} "$tag"; then
+		if [ -v readtreemerge ]; then
+			V git merge -s ours --no-commit "$tag"
+			V git read-tree -u --reset "$tag"
+			V git checkout @ -- .gear "$specfile"
+			V git commit $cleanup --no-edit -F "$msg"
+		elif ! V git merge --progress $cleanup $theirs --no-edit -F "$msg" "$tag"; then
 			if [ -t 0 ]; then
 				# Try manual merge if user is here.
 				GIT_PS1_SHOWCOLORHINTS=true \
@@ -225,17 +232,21 @@ update_from_git_origin() {
 				PS1='\w\[\033[1;35m\]$(__git_ps1)\[\033[m\]> ' \
 				bash --rcfile <(cat ~/.bashrc; echo . /usr/share/git-core/contrib/completion/git-prompt.sh) || :
 			fi
-		else
-			if [ -n "$theirs" ]; then
-				V git commit --no-edit --amend --trailer "Merge-Strategy: theirs"
-			fi
 		fi
+
+		# Check results.
 		if git diff --quiet &&
 		   git diff --quiet --cached &&
 		   git merge-base --is-ancestor "$tag" HEAD; then
 			info "Merge OK. Continuing..."
 		else
 			fatal "Merge failed!"
+		fi
+
+		if [ -v readtreemerge ]; then
+			V git commit --no-edit --amend --trailer "Merge-Strategy: read-tree"
+		elif [ -n "$theirs" ]; then
+			V git commit --no-edit --amend --trailer "Merge-Strategy: theirs"
 		fi
 	else
 		tagstate=unknown
