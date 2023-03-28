@@ -189,7 +189,7 @@ update_from_git_origin() {
 
 	# Have tag to merge.
 	if [ -n "$tag" ]; then
-		msg=".git/COMMIT_EDITMSG"
+		msg=".git/COMMIT_NEWMSG"
 		printf "Merge tag '%s' into %s" "$tag" "$(git branch --show-current)" > "$msg"
 		cleanup=
 		if [ -v nosignature ]; then
