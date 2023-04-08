@@ -226,6 +226,8 @@ update_from_git_origin() {
 			V git commit $cleanup --no-edit -F "$msg"
 		elif ! V git merge --progress $cleanup $theirs --no-edit -F "$msg" "$tag"; then
 			if [ -t 0 ]; then
+				echo >&2
+				echo ">>>>>>> This is merge failure shell." >&2
 				# Try manual merge if user is here.
 				GIT_PS1_SHOWCOLORHINTS=true \
 				GIT_PS1_SHOWDIRTYSTATE=true \
