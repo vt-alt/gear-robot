@@ -130,7 +130,7 @@ acquire_gpg_key() {
 		gpg_command="Link: $keyurl"
 	else
 		object_type=$(git cat-file -t "$tag")
-		# Extrat required keyid from signature.
+		# Extract required keyid from signature.
 		git cat-file -p "$tag" | grep -e committer -e tagger
 		echo "git verify-$object_type $tag" > .gear/GIT_VERIFY_OUTPUT
 		git "verify-$object_type" "$tag" >> .gear/GIT_VERIFY_OUTPUT 2>&1 || :
@@ -272,7 +272,7 @@ if [ -n "$WATCH" ]; then
 	if [ "$RET" -eq 0 ]; then
 		warn "Status: ${STATUS//_/ }"
 	else
-		fatal "Nothign to update (${STATUS//_/ })"
+		fatal "Nothing to update (${STATUS//_/ })"
 	fi
 
 	printf '$ sha256sum %q\n' "$FILENAME" >> .gear/IMPORT_OUTPUT
