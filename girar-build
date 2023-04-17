@@ -25,6 +25,9 @@ force=
 commit=--test-only
 dry=
 newtask=
+e2k=
+girar=
+gitery=
 while [ $# -gt 0 ]; do
 	opt=$1
 	case "$opt" in
@@ -32,6 +35,7 @@ while [ $# -gt 0 ]; do
 		--commit) commit=--commit ;;
 		-n | --dry | --dry-run) dry=y ;;
 		--new | --new-task ) newtask=y ;;
+		--e2k ) e2k=y ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -40,12 +44,20 @@ toplevel=$(git rev-parse --show-toplevel)
 cd "$toplevel"
 
 # Determine gitery remote
-if [ -e .git/refs/remotes/gitery ]; then
-	remote=gitery
-elif [ -e .git/refs/remotes/git.alt ]; then
-	remote=git.alt
+if [ -n "$e2k" ]; then
+	girar=girar-e2k
+	gitery=gitery-e2k
 else
-	fatal "gitery remote is unknown."
+	girar=girar
+	gitery=gitery
+	if [ -e .git/refs/remotes/git.alt ]; then
+		V git remote rename "git.alt" "$gitery"
+	fi
+fi
+if [ ! -e ".git/refs/remotes/$gitery" ]; then
+	topname=$(basename "$toplevel")
+	V ssh -n "$gitery" init-db "$topname"
+	V git remote add "$gitery" "$gitery:packages/${topname}.git"
 fi
 
 tag=( $(git tag --points-at @ '*-alt*') )
@@ -57,15 +69,15 @@ fi
 tag_id=$(git show-ref --tags "$tag" | cut -d' ' -f1)
 [ -n "$tag_id" ] || fatal "tag_id empty."
 
-V git push "$remote" "$tag" $force
+V git push "$gitery" "$tag" $force
 
 # Remote repo name
-url=$(git remote get-url "$remote")
+url=$(git remote get-url "$gitery")
 repo=$(basename "$url")
 
 if [ -z "$newtask" ]; then
 	# Are there already task for this?
-	tasks_ls=$(ssh -n girar task ls)
+	tasks_ls=$(ssh -n "$girar" task ls)
 	task_exact=$(echo "$tasks_ls" | grep -m1 -w -F "$repo=$tag" || :)
 else
 	task_exact=
@@ -89,7 +101,7 @@ if [ -n "$task_exact" ]; then
 	esac
 
 	# Determine what subtask to replace.
-	task_show=$(ssh -n girar task show --brief "$task_id")
+	task_show=$(ssh -n "$girar" task show --brief "$task_id")
 	task_sub=$(echo "$task_show" | grep -w -F "$repo=$tag")
 	if [ -z "$task_sub" ]; then
 		echo >&2 "${RED}Cannot find subtask with ($repo=$tag) in task $task_id.${NORM}"
@@ -108,7 +120,7 @@ if [ -n "$task_exact" ]; then
 	subtask=${subtask##[[:space:]]}
 
 	# Verify tag_id
-	subtext=$(ssh -n girar task show "$task_id" | grep -P "^\s*$subtask:") \
+	subtext=$(ssh -n "$girar" task show "$task_id" | grep -P "^\s*$subtask:") \
 		|| fatal "Subtask $subtask not found in task $task_id."
 	task_tag_id=$(echo "$subtext" | grep -Po '^\s*\d+:tag_id=\K.*') \
 		|| fatal "tag_id not found in subtask $subtask of $task_id."
@@ -125,7 +137,7 @@ if [ -n "$task_exact" ]; then
 	fi
 
 	echo >&2 "- Replacing subtask: $task_sub"
-	V ssh -n girar task delsub "$task_id" "$subtask"
+	V ssh -n "$girar" task delsub "$task_id" "$subtask"
 else
 	task_repic=$(echo "$tasks_ls" | grep -m1 -w -F "$repo=" || :)
 	if [ -n "$task_repic" ]; then
@@ -135,9 +147,9 @@ else
 		echo >&2
 	fi
 	echo >&2 "- Task for rebuild not found, create new task."
-	task_id=$(V ssh -n girar task new)
+	task_id=$(V ssh -n "$girar" task new)
 fi
-V ssh -n girar task add "$task_id" "$repo=$tag"
+V ssh -n "$girar" task add "$task_id" "$repo=$tag"
 
-[ -n "$dry" ] || V ssh -n girar task run $commit "$task_id"
+[ -n "$dry" ] || V ssh -n "$girar" task run $commit "$task_id"
 
