@@ -54,7 +54,7 @@ else
 		V git remote rename "git.alt" "$gitery"
 	fi
 fi
-if [ ! -e ".git/refs/remotes/$gitery" ]; then
+if ! git config "remote.$gitery.url" >& /dev/null; then
 	topname=$(basename "$toplevel")
 	V ssh -n "$gitery" init-db "$topname"
 	V git remote add "$gitery" "$gitery:packages/${topname}.git"
