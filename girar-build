@@ -28,6 +28,7 @@ newtask=
 e2k=
 girar=
 gitery=
+branch=
 while [ $# -gt 0 ]; do
 	opt=$1
 	case "$opt" in
@@ -36,6 +37,7 @@ while [ $# -gt 0 ]; do
 		-n | --dry | --dry-run) dry=y ;;
 		--new | --new-task ) newtask=y ;;
 		--e2k ) e2k=y ;;
+		--repo=*) branch=${opt#*=} ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -147,7 +149,7 @@ else
 		echo >&2
 	fi
 	echo >&2 "- Task for rebuild not found, create new task."
-	task_id=$(V ssh -n "$girar" task new)
+	task_id=$(V ssh -n "$girar" task new $branch)
 fi
 V ssh -n "$girar" task add "$task_id" "$repo=$tag"
 
