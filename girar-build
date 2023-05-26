@@ -29,6 +29,7 @@ e2k=
 girar=
 gitery=
 branch=
+disapprove=
 while [ $# -gt 0 ]; do
 	opt=$1
 	case "$opt" in
@@ -38,6 +39,7 @@ while [ $# -gt 0 ]; do
 		--new | --new-task ) newtask=y ;;
 		--e2k ) e2k=y ;;
 		--repo=*) branch=${opt#*=} ;;
+		--dis*) disapprove=y ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -152,6 +154,11 @@ else
 	task_id=$(V ssh -n "$girar" task new $branch)
 fi
 V ssh -n "$girar" task add "$task_id" "$repo=$tag"
+
+if [ -n "$disapprove" ]; then
+	subtask=$(ssh -n "$girar" task show --brief "$task_id" | grep -F ":$repo=$tag" | grep -Po '^\s\K\d+')
+	echo COMMIT BARRIER | V ssh girar task disapprove "$task_id" "$subtask"
+fi
 
 [ -n "$dry" ] || V ssh -n "$girar" task run $commit "$task_id"
 
