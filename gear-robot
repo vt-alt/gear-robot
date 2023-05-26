@@ -36,7 +36,7 @@ info() {
 force='' build='' push='' commit='' theirs=''
 gears_update=y
 keyserver="--auto-key-locate wkd"
-unset nosignature keyurl readtreemerge
+unset nosignature keyurl readtreemerge disapprove
 while [ $# -gt 0 ]; do
 	opt=$1
 	case "$opt" in
@@ -52,6 +52,7 @@ while [ $# -gt 0 ]; do
 		--key=*) keyurl=${opt#*=} ;;
 		--nosig* | --no-sig*) nosignature=y ;;
 		--read-tree) readtreemerge=y ;;
+		--disa*) disapprove=y ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -421,9 +422,13 @@ setsid gear-create-tag $force
 [ -n "$push" ]  && V git push gitery "$futag" $force
 if [ -n "$commit" ]; then
 	# shellcheck disable=SC2086
-	task=$(V ssh girar task new ${branch-})
+	task=$(V ssh -n girar task new ${branch-})
 	echo "$task" > .gear/task
-	V ssh girar task add "$task" repo "$NAME" "$futag"
-	V ssh girar task run "$commit" "$task"
+	V ssh -n girar task add "$task" repo "$NAME" "$futag"
+	if [ -v disapprove ]; then
+		subtask=$(ssh -n girar task show --brief "$task" | grep -e ":$NAME\.git=" | grep -Po '^\s\K\d+')
+		echo TEST | V ssh girar task disapprove "$task" "$subtask"
+	fi
+	V ssh -n girar task run "$commit" "$task"
 fi
 
