@@ -36,7 +36,7 @@ info() {
 force='' build='' push='' commit='' theirs=''
 gears_update=y
 keyserver="--auto-key-locate wkd"
-unset nosignature keyurl readtreemerge disapprove
+unset nosignature keyurl readtreemerge disapprove allow_rc
 while [ $# -gt 0 ]; do
 	opt=$1
 	case "$opt" in
@@ -53,6 +53,7 @@ while [ $# -gt 0 ]; do
 		--nosig* | --no-sig*) nosignature=y ;;
 		--read-tree) readtreemerge=y ;;
 		--disa*) disapprove=y ;;
+		--rc) allow_rc=y ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -173,7 +174,7 @@ update_from_git_origin() {
 	# Find new tags
 	tags=()
 	while read -r tag; do
-		[[ $tag =~ -alt|^gb-|rc|beta|alpha ]] && continue
+		[ ! -v allow_rc ] && [[ $tag =~ -alt|^gb-|rc|beta|alpha ]] && continue
 		# --is-ancestor: Check if the first <commit> is an ancestor of the second <commit>, and exit with status 0 if true.
 		git merge-base --is-ancestor "$tag" HEAD && break
 		# Consider only tags in this branch
@@ -321,11 +322,13 @@ else
 		1) tag=$tags ;;
 		*) warn "Too many tags pointing at HEAD: ${tags[*]}" ;;
 	esac
-	ver=${tag##*-}
-	ver=${ver#*[Vv]}
+	ver=${tag#*[Vv]}
+	[ -z "${ver##*-*}" ] && ver="${ver//-/.}"
 	info "Top tag is $tag ($tagstate), Version: $ver"
 fi
-[[ "$ver" =~ ^[[:digit:]]+(.[[:digit:]]+)*$ ]] || fatal "Unknown version format: $ver"
+if [[ ! "$ver" =~ ^[[:digit:]]+(.[[:digit:]]+)*$ ]]; then
+	[ -v allow_rc ] && disapprove=y || fatal "Unknown version format: $ver"
+fi
 
 futag=$ver-alt1
 [ -z "$force" ] && [ -n "$(git tag -l "$futag")" ] \
