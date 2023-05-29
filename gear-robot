@@ -202,17 +202,14 @@ update_from_git_origin() {
 			# Hide:
 			#   gpg: WARNING: Using untrusted key!
 			echo "quiet" >> $GNUPGHOME/gpg.conf
-			if [ "$(git cat-file -t "$tag")" = commit ]; then
-				V git verify-commit "$tag"
-				printf -- "Merge signed commit '%s' into %s\n\n%s" \
-					"$tag" \
-					"$(git branch --show-current)" \
-					"$(git verify-commit "$tag" |& sed 's/^/# /')" > "$msg"
-				cleanup=--cleanup=whitespace
-			else
-				# In case of signed tag git-merge adds message automatically.
-				V git verify-tag "$tag"
-			fi
+			what=$(git cat-file -t "$tag")
+			V git verify-$what "$tag"
+			printf -- "Merge signed %s '%s' into %s\n\n%s" \
+				"$what" \
+				"$tag" \
+				"$(git branch --show-current)" \
+				"$(git verify-$what "$tag" |& sed 's/^/# /')" > "$msg"
+			cleanup=--cleanup=whitespace
 			tagstate=VERIFIED
 		else
 			warn "Lame upstream, tag is not signed."
