@@ -319,7 +319,9 @@ else
 		1) tag=$tags ;;
 		*) warn "Too many tags pointing at HEAD: ${tags[*]}" ;;
 	esac
-	ver=${tag#*[Vv]}
+	# Delete letter prefixes with a dash. Then delete version prefix 'v'.
+	ver=${tag##+([[:alpha:]])-}
+	ver=${ver#*[Vv]}
 	[ -z "${ver##*-*}" ] && ver="${ver//-/.}"
 	info "Top tag is $tag ($tagstate), Version: $ver"
 fi
