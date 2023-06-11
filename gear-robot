@@ -54,6 +54,7 @@ while [ $# -gt 0 ]; do
 		--read-tree) readtreemerge=y ;;
 		--disa*) disapprove=y ;;
 		--rc) allow_rc=y ;;
+		--no-vendor) no_vendor=y ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -354,7 +355,9 @@ fi
 
 # Vendorize.
 cmd=
-if [ -f Cargo.toml ]; then
+if [ -v no_vendor ]; then
+	:
+elif [ -f Cargo.toml ]; then
 	if type -p cargo-vendor-filterer-no >/dev/null; then
 		cmd="cargo vendor-filterer"
 		rm -rf vendor
