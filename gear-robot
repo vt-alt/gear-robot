@@ -393,12 +393,16 @@ fi
 
 sver=$(grep -Po '^Version:\s*\K\S+' "$specfile")
 [ -n "$sver" ] || fatal "No 'Version:' found in $specfile"
+cver=$(grep -A1 '^%changelog' "$specfile" | tail -1 | grep -Po '> \K.*')
+cver=${cver#*:}
+cver=${cver%-*}
+[ "$sver" = "$cver" ] || fatal "Version ($sver) is unequal to last changelog entry ($cver), but we need to update Version tag!"
 # $sver is unquoted to detect parse errors.
 # shellcheck disable=SC2086
 case $(rpmvercmp "$ver" $sver) in
-	-1) fatal "Version in $specfile is newer than $ver" ;;
-	0)  fatal "Version in $specfile is equal to $ver" ;;
-	1) ;;
+	-1) fatal "Version in $specfile ($sver) is newer than $ver" ;;
+	0)  fatal "Version in $specfile ($sver) is equal to $ver" ;;
+	1)  info  "Version in $specfile ($sver) is older than $ver, OK" ;;
 	*)  fatal "'rpmvercmp $ver $sver' error." ;;
 esac
 
