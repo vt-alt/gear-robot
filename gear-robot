@@ -36,7 +36,7 @@ info() {
 force='' build='' push='' commit='' theirs=''
 gears_update=y
 keyserver="--auto-key-locate wkd"
-unset nosignature keyurl readtreemerge disapprove allow_rc
+unset nosignature keyurl readtreemerge disapprove allow_rc no_fetch
 while [ $# -gt 0 ]; do
 	opt=$1
 	case "$opt" in
@@ -55,6 +55,7 @@ while [ $# -gt 0 ]; do
 		--disa*) disapprove=y ;;
 		--rc) allow_rc=y ;;
 		--no-vendor) no_vendor=y ;;
+		--no-fetch) no_fetch=y ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -159,6 +160,7 @@ acquire_gpg_key() {
 }
 
 update_from_git_origin() {
+	[ -v no_fetch ] ||
 	V git fetch origin
 
 	# Find latest (merged) upstream tag in this branch
@@ -188,10 +190,11 @@ update_from_git_origin() {
 		1) tag=$tags ;;
 		*) tag=$(gum choose -- "${tags[@]}") ;;
 	esac
-	echo "Selected tag: $tag"
 
 	# Have tag to merge.
 	if [ -n "$tag" ]; then
+		echo "Selected tag: $tag"
+
 		msg=".git/COMMIT_NEWMSG"
 		printf "Merge tag '%s' into %s" "$tag" "$(git branch --show-current)" > "$msg"
 		cleanup=
