@@ -340,7 +340,7 @@ futag=$ver-alt1
 # Make sure we have newer version than that in repo.
 if [ -d /ALT/ ]; then
 	repo=${branch-Sisyphus}
-	srpm=( "/ALT/$repo/files/SRPMS/$NAME-+([^-])-+([^-]).src.rpm" )
+	srpm=( $(ls "/ALT/$repo/files/SRPMS/$NAME"-+([^-])-+([^-])".src.rpm") )
 	suff=${srpm%-*-*.src.rpm}
 	revr=${srpm#"$suff-"}
 	revr=${revr%.src.rpm}
