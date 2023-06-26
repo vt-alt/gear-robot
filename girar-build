@@ -8,6 +8,7 @@ export LANG=C LC_ALL=C
  GREEN=$'\e[1;32m'
   BLUE=$'\e[1;34m'
   NORM=$'\e[m'
+export RED GREEN BLUE NORM
 
 V() {
         printf >&2 "${GREEN}+"
@@ -30,13 +31,15 @@ girar=
 gitery=
 branch=
 disapprove=
+task_id=
 while [ $# -gt 0 ]; do
 	opt=$1
 	case "$opt" in
 		-f | --force) force=-f ;;
 		--commit) commit=--commit ;;
-		-n | --dry | --dry-run) dry=y ;;
+		-n | --dry | --dry-run | --no-run) dry=y ;;
 		--new | --new-task ) newtask=y ;;
+		--task=*) task_id=${opt#*=} ;;
 		--e2k ) e2k=y ;;
 		--repo=*) branch=${opt#*=} ;;
 		--dis*) disapprove=y ;;
@@ -49,11 +52,11 @@ cd "$toplevel"
 
 # Determine gitery remote
 if [ -n "$e2k" ]; then
-	girar=girar-e2k
-	gitery=gitery-e2k
+	girar='girar-e2k'
+	gitery='gitery-e2k'
 else
-	girar=girar
-	gitery=gitery
+	girar='girar'
+	gitery='gitery'
 	if [ -e .git/refs/remotes/git.alt ]; then
 		V git remote rename "git.alt" "$gitery"
 	fi
@@ -79,50 +82,68 @@ V git push "$gitery" "$tag" $force
 url=$(git remote get-url "$gitery")
 repo=$(basename "$url")
 
-if [ -z "$newtask" ]; then
-	# Are there already task for this?
-	tasks_ls=$(ssh -n "$girar" task ls)
-	task_exact=$(echo "$tasks_ls" | grep -m1 -w -F "$repo=$tag" || :)
+# Determine target task number
+if [ -n "$task_id" ]; then
+	tasks_ls=$(ssh -n "$girar" task ls --brief)
+	task_matched=$(echo "$tasks_ls" | grep "^#$task_id " || :)
+	[ -n "$task_matched" ] || fatal "${RED}Requested task does not exist${NORM}"
+	echo >&2 "- Using existing task $task_id"
+elif [ -n "$newtask" ]; then
+	unset task_matched
 else
-	task_exact=
-fi
-if [ -n "$task_exact" ]; then
-	if [ "$(echo "$task_exact" | wc -l)" -ne 1 ]; then
-		echo >&2 "${RED}Too much tasks with $repo=$tag found:${NORM}"
-		echo >&2
-		echo "$task_exact" | sed 's/^/   /' >&2
-		echo >&2
-		exit 1
+	# Use heuristic to search for appropriate task.
+	tasks_ls=$(ssh -n "$girar" task ls)
+	task_matched=$(echo "$tasks_ls" | grep -m1 -w -F "$repo=$tag" || :)
+	if [ -n "$task_matched" ]; then
+		if [ "$(echo "$task_matched" | wc -l)" -ne 1 ]; then
+			echo >&2 "${RED}Too much tasks with $repo=$tag found:${NORM}"
+			echo >&2
+			echo "$task_matched" | sed 's/^/   /' >&2
+			echo >&2
+			exit 1
+		fi
+		task_id=${task_matched%% *}
+		task_id=${task_id#\#}
+		echo >&2 "- Task to rebuild $repo=$tag found: $task_id"
 	fi
-	task_id=${task_exact%% *}
-	task_id=${task_id#\#}
-	echo >&2 "- Task to rebuild $repo=$tag found: $task_id"
+fi
+unset tasks_ls
 
-	task_state=$(echo "$task_exact" | cut -d' ' -f2)
+task_state=
+if [ -z "$task_id" ]; then
+	# shellcheck disable=SC2086
+	task_id=$(V ssh -n "$girar" task new $branch)
+	echo >&2 "- Creating new task $task_id"
+	task_show=
+else
+	task_state=$(echo "$task_matched" | cut -d' ' -f2)
 	case "$task_state" in
 		FAILED | NEW | TESTED | EPERM) ;;
 		*) fatal "Task $task_id is in unmodifable state $task_state."
 	esac
-
-	# Determine what subtask to replace.
 	task_show=$(ssh -n "$girar" task show --brief "$task_id")
-	task_sub=$(echo "$task_show" | grep -w -F "$repo=$tag")
-	if [ -z "$task_sub" ]; then
-		echo >&2 "${RED}Cannot find subtask with ($repo=$tag) in task $task_id.${NORM}"
-		echo >&2
-		echo "$task_show" | sed 's/^/   /' >&2
-		echo >&2
-		exit 1
-	elif [ $(echo "$task_sub" | wc -l) -ne 1 ]; then
-		echo >&2 "${RED}Too much matching sub-tasks (with $repo=$tag) found:${NORM}"
-		echo >&2
-		echo "$task_show" | sed 's/^/   /' >&2
-		echo >&2
-		exit 1
-	fi
+fi
+unset task_matched
+unset task_state
+
+subtask=
+nexttask=
+if [ -n "$task_show" ]; then
+	# Determine what subtask to replace.
+	task_sub=$(echo "$task_show" | grep -w -F "$repo=$tag" ||:)
 	subtask=${task_sub%%:*}
 	subtask=${subtask##[[:space:]]}
+	if [ -n "$subtask" ]; then
+		# Determine next task to add before that.
+		task_sub=$(echo "$task_show" | grep -A1 "^ $subtask:" | tail -n+2)
+		nexttask=${task_sub%%:*}
+		nexttask=${nexttask##[[:space:]]}
+	fi
+	unset task_sub
+fi
+unset task_show
 
+if [ -n "$subtask" ]; then
 	# Verify tag_id
 	subtext=$(ssh -n "$girar" task show "$task_id" | grep -P "^\s*$subtask:") \
 		|| fatal "Subtask $subtask not found in task $task_id."
@@ -142,18 +163,10 @@ if [ -n "$task_exact" ]; then
 
 	echo >&2 "- Replacing subtask: $task_sub"
 	V ssh -n "$girar" task delsub "$task_id" "$subtask"
-else
-	task_repic=$(echo "$tasks_ls" | grep -m1 -w -F "$repo=" || :)
-	if [ -n "$task_repic" ]; then
-		echo >&2 "${BLUE}JFYI: There is other task(s) for $repo:${NORM}"
-		echo >&2
-		echo "$task_repic" | sed 's/^/   /' >&2
-		echo >&2
-	fi
-	echo >&2 "- Task for rebuild not found, create new task."
-	task_id=$(V ssh -n "$girar" task new $branch)
 fi
-V ssh -n "$girar" task add "$task_id" "$repo=$tag"
+
+# shellcheck disable=SC2086
+V ssh -n "$girar" task add "$task_id" $nexttask "$repo=$tag"
 
 if [ -n "$disapprove" ]; then
 	subtask=$(ssh -n "$girar" task show --brief "$task_id" | grep -F ":$repo=$tag" | grep -Po '^\s\K\d+')
@@ -161,4 +174,3 @@ if [ -n "$disapprove" ]; then
 fi
 
 [ -n "$dry" ] || V ssh -n "$girar" task run $commit "$task_id"
-
