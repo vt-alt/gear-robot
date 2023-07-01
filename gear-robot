@@ -37,6 +37,7 @@ force='' build='' push='' commit='' theirs=''
 gears_update=y
 keyserver="--auto-key-locate wkd"
 unset nosignature keyurl readtreemerge disapprove allow_rc no_fetch
+unset updatekey
 while [ $# -gt 0 ]; do
 	opt=$1
 	case "$opt" in
@@ -49,6 +50,7 @@ while [ $# -gt 0 ]; do
 		--all) build=y push=y commit=--commit ;;
 		--keyserver=ubuntu) keyserver="--keyserver hkps://keyserver.ubuntu.com" ;;
 		--keyserver) shift; keyserver="--keyserver $1" ;;
+		--update-key) updatekey=y ;;
 		--key=*) keyurl=${opt#*=} ;;
 		--nosig* | --no-sig*) nosignature=y ;;
 		--read-tree) readtreemerge=y ;;
@@ -117,14 +119,14 @@ else
 		GPGKEYS=
 	done
 	if [ -e "$GPGKEYS" ]; then
-		declare -p GNUPGHOME
+		printf '\e[1;32m+ %s\e[m\n' "$(declare -p GNUPGHOME)"
 		V gpg2 --quiet --import "$GPGKEYS"
 	fi
 fi
 
 acquire_gpg_key() {
 	local tag=$1
-	if [ -e .gear/upstream-signing-key.asc ]; then
+	if [ ! -v updatekey ] && [ -e .gear/upstream-signing-key.asc ]; then
 		echo >&2 "GPG key is known."
 		return
 	fi
