@@ -161,7 +161,7 @@ if [ -n "$subtask" ]; then
 		{ echo "$subtext"; echo; } >> .git/subtask.log
 	fi
 
-	echo >&2 "- Replacing subtask: $task_sub"
+	echo >&2 "- Replacing subtask: $subtask"
 	V ssh -n "$girar" task delsub "$task_id" "$subtask"
 fi
 
