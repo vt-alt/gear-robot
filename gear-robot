@@ -118,7 +118,7 @@ else
 		[ -e "$GPGKEYS" ] && break
 		GPGKEYS=
 	done
-	if [ -e "$GPGKEYS" ]; then
+	if [ -e "$GPGKEYS" ] && [ ! -v updatekey ]; then
 		printf '\e[1;32m+ %s\e[m\n' "$(declare -p GNUPGHOME)"
 		V gpg2 --quiet --import "$GPGKEYS"
 	fi
@@ -132,7 +132,7 @@ acquire_gpg_key() {
 	fi
 	local object_type
 	if [ -v keyurl ]; then
-		curl -sSL "$keyurl" | V gpg2 --import |& tee .gear/GPG_IMPORT_OUTPUT
+		V curl -sSL "$keyurl" | V gpg2 --import |& tee .gear/GPG_IMPORT_OUTPUT
 		gpg_command="Link: $keyurl"
 	else
 		object_type=$(git cat-file -t "$tag")
