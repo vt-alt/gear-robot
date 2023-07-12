@@ -42,7 +42,7 @@ while [ $# -gt 0 ]; do
 		--task=*) task_id=${opt#*=} ;;
 		--e2k ) e2k=y ;;
 		--repo=*) branch=${opt#*=} ;;
-		--dis*) disapprove=y ;;
+		--dis* | --test ) disapprove=y ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
