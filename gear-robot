@@ -299,7 +299,7 @@ if [ -n "$WATCH" ]; then
 		git log --format=%B -n1
 		cat .gear/IMPORT_OUTPUT
 		printf '\nLink: %s\n' "$URL"
-		curl -s -I "$URL" | grep -i -e ^last-modified: -e ^etag:
+		curl -L -s -I "$URL" | grep -i -e ^last-modified: -e ^etag: -e location: || :
 	} | V git commit -q --amend -F-
 else
 	update_from_git_origin
