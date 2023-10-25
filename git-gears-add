@@ -12,8 +12,13 @@ V() {
         "$@"
 }
 
-description="$(gear --describe --disable-specsubst ${commit:+-t "$commit"})"
-name="${description%% *}"
+description="$(gear --describe --disable-specsubst ${commit:+-t "$commit"} ||:)"
+if [ -n "$description" ]; then
+	name="${description%% *}"
+else
+	echo >&2 "Guess name from the directory."
+	name=$(basename "$PWD")
+fi
 
 url="gitery:/gears/${name:0:1}/$name.git"
 
