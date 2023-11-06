@@ -26,6 +26,8 @@ force=
 commit=--test-only
 norun=
 dryrun=
+failwhen=
+hurry=
 newtask=
 e2k=
 girar=
@@ -41,6 +43,10 @@ while [ $# -gt 0 ]; do
 		-n | --no-run) norun=y ;;
 		--dry | --dry-run) dryrun=--dry-run ;;
 		--new | --new-task ) newtask=y ;;
+		--fail-early) failwhen=--fail-early ;;
+		--fail-late) failwhen=--fail-late ;;
+		--hurry) hurry=--hurry ;;
+		--unhurry) hurry=--unhurry ;;
 		--task=*) task_id=${opt#*=} ;;
 		--e2k ) e2k=y ;;
 		--repo=*) branch=${opt#*=} ;;
@@ -158,7 +164,7 @@ if [ -n "$subtask" ]; then
 		echo "$subtext" | sed 's/^/   /' >&2
 		echo >&2
 		if [ $commit = --commit ] && [ -z "$norun" ]; then
-			V ssh -n "$girar" task run $dryrun $commit "$task_id"
+			V ssh -n "$girar" task run $dryrun $commit $failwhen $hurry "$task_id"
 		fi
 		exit
 	else
@@ -178,4 +184,4 @@ if [ -n "$disapprove" ]; then
 	echo COMMIT BARRIER | V ssh girar task disapprove "$task_id" "$subtask"
 fi
 
-[ -n "$norun" ] || V ssh -n "$girar" task run $dryrun $commit "$task_id"
+[ -n "$norun" ] || V ssh -n "$girar" task run $dryrun $commit $failwhen $hurry "$task_id"
