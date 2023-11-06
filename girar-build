@@ -155,7 +155,10 @@ if [ -n "$subtask" ]; then
 		echo >&2
 		echo "$subtext" | sed 's/^/   /' >&2
 		echo >&2
-		exit 0
+		if [ $commit = --commit ] && [ -z "$dry" ]; then
+			V ssh -n "$girar" task run $commit "$task_id"
+		fi
+		exit
 	else
 		echo >&2 "- Subtask $subtask tag_id=$task_tag_id obsolete, needs re-add."
 		{ echo "$subtext"; echo; } >> .git/subtask.log
