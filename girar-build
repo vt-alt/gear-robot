@@ -118,6 +118,7 @@ fi
 unset tasks_ls
 
 task_state=
+declare -i sub_count=0
 if [ -z "$task_id" ]; then
 	# shellcheck disable=SC2086
 	task_id=$(V ssh -n "$girar" task new $branch)
@@ -130,6 +131,7 @@ else
 		*) fatal "Task $task_id is in unmodifable state $task_state."
 	esac
 	task_show=$(ssh -n "$girar" task show --brief "$task_id")
+	sub_count=$(echo "$task_show" | grep -E '^[[:space:]]*[[:digit:]]+:' -c)
 fi
 unset task_matched
 unset task_state
@@ -153,6 +155,14 @@ unset task_show
 
 task_run() {
 	local task_id=$1
+	if [ $sub_count -lt 1 ]; then
+		echo >&2 "${RED}$sub_count subtasks, something went wrong.${NORM}"
+		exit 1
+	fi
+	if [ $commit = --commit ] && [ $sub_count -ne 1 ]; then
+		echo >&2 "${RED}Too many subtasks [$sub_count] for commit (unsafe).${NORM}"
+		exit 1
+	fi
 	[ -z "$norun" ] || return
 	V ssh -n "$girar" task run $dryrun $commit $failwhen $hurry "$task_id"
 }
@@ -165,7 +175,7 @@ if [ -n "$subtask" ]; then
 		|| fatal "tag_id not found in subtask $subtask of $task_id."
 
 	if [ "$tag_id" = "$task_tag_id" ]; then
-		echo >&2 "${RED}tag_id for subtask is the same as ours, no need to re-add.${NORM}"
+		echo >&2 "${BLUE}tag_id for subtask is the same as ours, no need to re-add.${NORM}"
 		echo >&2
 		echo "$subtext" | sed 's/^/   /' >&2
 		echo >&2
@@ -178,10 +188,12 @@ if [ -n "$subtask" ]; then
 
 	echo >&2 "- Replacing subtask: $subtask"
 	V ssh -n "$girar" task delsub "$task_id" "$subtask"
+	sub_count+=-1
 fi
 
 # shellcheck disable=SC2086
 V ssh -n "$girar" task add "$task_id" $nexttask "$repo=$tag"
+sub_count+=1
 
 if [ -n "$disapprove" ]; then
 	subtask=$(ssh -n "$girar" task show --brief "$task_id" | grep -F ":$repo=$tag" | grep -Po '^\s\K\d+')
