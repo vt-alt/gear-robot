@@ -151,6 +151,12 @@ if [ -n "$task_show" ]; then
 fi
 unset task_show
 
+task_run() {
+	local task_id=$1
+	[ -z "$norun" ] || return
+	V ssh -n "$girar" task run $dryrun $commit $failwhen $hurry "$task_id"
+}
+
 if [ -n "$subtask" ]; then
 	# Verify tag_id
 	subtext=$(ssh -n "$girar" task show "$task_id" | grep -P "^\s*$subtask:") \
@@ -163,9 +169,7 @@ if [ -n "$subtask" ]; then
 		echo >&2
 		echo "$subtext" | sed 's/^/   /' >&2
 		echo >&2
-		if [ $commit = --commit ] && [ -z "$norun" ]; then
-			V ssh -n "$girar" task run $dryrun $commit $failwhen $hurry "$task_id"
-		fi
+		[ $commit = --commit ] && task_run "$task_id"
 		exit
 	else
 		echo >&2 "- Subtask $subtask tag_id=$task_tag_id obsolete, needs re-add."
@@ -184,4 +188,4 @@ if [ -n "$disapprove" ]; then
 	echo COMMIT BARRIER | V ssh girar task disapprove "$task_id" "$subtask"
 fi
 
-[ -n "$norun" ] || V ssh -n "$girar" task run $dryrun $commit $failwhen $hurry "$task_id"
+task_run "$task_id"
