@@ -51,6 +51,7 @@ while [ $# -gt 0 ]; do
 		--e2k ) e2k=y ;;
 		--repo=*) branch=${opt#*=} ;;
 		--dis* | --test ) disapprove=y ;;
+		--tag=*) tag=${opt#*=} ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -75,14 +76,16 @@ if ! git config "remote.$gitery.url" >& /dev/null; then
 	V git remote add "$gitery" "$gitery:packages/${topname}.git"
 fi
 
-tag=( $(git tag --points-at @ '*-alt*') )
-if [ ${#tag[@]} -gt 1 ]; then
-	fatal "Too many -alt tags: ${tag[*]}."
-elif [ ${#tag[@]} -ne 1 ]; then
-	fatal "Top level -alt tag is not found."
+if [ -z "${tag-}" ]; then
+	tag=( $(git tag --points-at @ '*-alt*') )
+	if [ ${#tag[@]} -gt 1 ]; then
+		fatal "Too many -alt tags: ${tag[*]}."
+	elif [ ${#tag[@]} -ne 1 ]; then
+		fatal "Top level -alt tag is not found."
+	fi
+	tag_id=$(git show-ref --tags "$tag" | cut -d' ' -f1)
+	[ -n "$tag_id" ] || fatal "tag_id empty."
 fi
-tag_id=$(git show-ref --tags "$tag" | cut -d' ' -f1)
-[ -n "$tag_id" ] || fatal "tag_id empty."
 
 V git push "$gitery" "$tag" $force
 
