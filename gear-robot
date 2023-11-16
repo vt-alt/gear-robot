@@ -227,7 +227,7 @@ update_from_git_origin() {
 		if [ -v readtreemerge ]; then
 			V git merge -s ours --no-commit "$tag"
 			V git read-tree -u --reset "$tag"
-			V git checkout @ -- .gear "$specfile"
+			V git checkout @ -- .gear "$specfile" ${READ_TREE_EXCLUDE-}
 			V git commit $cleanup --no-edit -F "$msg"
 		elif ! V git merge --progress $cleanup $theirs --no-edit -F "$msg" "$tag"; then
 			if [ -t 0 ]; then
@@ -252,6 +252,8 @@ update_from_git_origin() {
 
 		if [ -v readtreemerge ]; then
 			V git commit --no-edit --amend --trailer "Merge-Strategy: read-tree"
+			[ -n "${READ_TREE_EXCLUDE-}" ] &&
+			V git commit --no-edit --amend --trailer "Read-tree-exclude: $READ_TREE_EXCLUDE"
 		elif [ -n "$theirs" ]; then
 			V git commit --no-edit --amend --trailer "Merge-Strategy: theirs"
 		fi
