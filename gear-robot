@@ -161,6 +161,22 @@ acquire_gpg_key() {
 	V git commit -m "ALT: Import GPG key for $who" -m "$gpg_command"
 }
 
+update_git_subtrees() {
+	if [ -s .gear/subtrees ]; then
+		READ_TREE_EXCLUDE+=" $(awk '/^[[:space:]]*[^#]/ {print $1}' .gear/subtrees)"
+		READ_TREE_EXCLUDE=$(echo "$READ_TREE_EXCLUDE" | xargs)
+	fi
+
+	# Merge subtrees.
+	if [ -s .gear/subtrees ]; then
+		local prefix remote branch args
+		while read prefix remote branch args; do
+			branch=${branch:-master}
+			V git subtree pull -P "$prefix" "$remote" "$branch" $args -m "Pull subtree $prefix from $remote $branch"
+		done < .gear/subtrees
+	fi
+}
+
 update_from_git_origin() {
 	[ -v no_fetch ] ||
 	V git fetch origin
@@ -304,6 +320,7 @@ if [ -n "$WATCH" ]; then
 		curl -L -s -I "$URL" | grep -i -e ^last-modified: -e ^etag: -e location: || :
 	} | V git commit -q --amend -F-
 else
+	update_git_subtrees
 	update_from_git_origin
 	git rev-parse @^2 >/dev/null 2>&1 || fatal "Not in a merge commit."
 fi
