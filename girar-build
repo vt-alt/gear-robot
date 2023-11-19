@@ -92,6 +92,7 @@ V git push "$gitery" "$tag" $force
 # Remote repo name
 url=$(git remote get-url "$gitery")
 repo=$(basename "$url")
+dir_repo=${url##*:}
 
 # Determine target task number
 if [ -n "$task_id" ]; then
@@ -195,7 +196,7 @@ if [ -n "$subtask" ]; then
 fi
 
 # shellcheck disable=SC2086
-V ssh -n "$girar" task add "$task_id" $nexttask "$repo=$tag"
+V ssh -n "$girar" task add "$task_id" $nexttask "$dir_repo=$tag"
 sub_count+=1
 
 if [ -n "$disapprove" ]; then
