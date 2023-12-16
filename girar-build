@@ -35,6 +35,8 @@ gitery=
 branch=
 disapprove=
 task_id=
+baseurl=
+skip_repo_check=
 while [ $# -gt 0 ]; do
 	opt=$1
 	case "$opt" in
@@ -52,6 +54,7 @@ while [ $# -gt 0 ]; do
 		--repo=*) branch=${opt#*=} ;;
 		--dis* | --test ) disapprove=y ;;
 		--tag=*) tag=${opt#*=} ;;
+		--skip-repo-check) skip_repo_check=y ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -69,6 +72,7 @@ else
 	if [ -e .git/refs/remotes/git.alt ]; then
 		V git remote rename "git.alt" "$gitery"
 	fi
+	baseurl="http://ftp.altlinux.org/pub/distributions/archive/${branch:-sisyphus}/latest/files/SRPMS"
 fi
 if ! git config "remote.$gitery.url" >& /dev/null; then
 	topname=$(basename "$toplevel")
@@ -87,12 +91,24 @@ if [ -z "${tag-}" ]; then
 	[ -n "$tag_id" ] || fatal "tag_id empty."
 fi
 
-V git push "$gitery" "$tag" $force
-
 # Remote repo name
 url=$(git remote get-url "$gitery")
 repo=$(basename "$url")
+name=$(basename "$repo" '.git')
 dir_repo=${url##*:}
+
+# Check existence of the package.
+pkgname="$name-$tag"
+pkgurl="$baseurl/$pkgname.src.rpm"
+if [ -n "$baseurl" ] && [ -z "$skip_repo_check" ]; then
+	if curl -sSfL --head "$pkgurl" &>/dev/null; then
+		fatal "The package is already there:"  "$pkgurl"
+	else
+		echo "Package not found in repo."
+	fi
+fi
+
+V git push "$gitery" "$tag" $force
 
 # Determine target task number
 if [ -n "$task_id" ]; then
