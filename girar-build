@@ -32,7 +32,7 @@ newtask=
 e2k=
 girar=
 gitery=
-branch=
+branch=sisyphus
 disapprove=
 task_id=
 baseurl=
@@ -72,7 +72,7 @@ else
 	if [ -e .git/refs/remotes/git.alt ]; then
 		V git remote rename "git.alt" "$gitery"
 	fi
-	baseurl="http://ftp.altlinux.org/pub/distributions/archive/${branch:-sisyphus}/latest/files/SRPMS"
+	indexbase="http://ftp.altlinux.org/pub/distributions/archive/$branch/index/src"
 fi
 if ! git config "remote.$gitery.url" >& /dev/null; then
 	topname=$(basename "$toplevel")
@@ -98,13 +98,12 @@ name=$(basename "$repo" '.git')
 dir_repo=${url##*:}
 
 # Check existence of the package.
-pkgname="$name-$tag"
-pkgurl="$baseurl/$pkgname.src.rpm"
-if [ -n "$baseurl" ] && [ -z "$skip_repo_check" ]; then
-	if curl -sSfL --head "$pkgurl" &>/dev/null; then
-		fatal "The package is already there:"  "$pkgurl"
+if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
+	indexurl="$indexbase/${name:0:1}/$name/d-t-s-evr.list"
+	if curl -sSfL "$indexurl" | awk "\$4 == \"$tag\"" | grep .; then
+		fatal "The package is already committed to $branch"
 	else
-		echo "Package not found in repo."
+		echo "Package not found in $branch."
 	fi
 fi
 
