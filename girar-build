@@ -156,7 +156,11 @@ if git log --format='%m %h %ad %s' --date=short --first-parent $selector \
 fi
 if git log --format='%s' --first-parent $selector | sort | uniq -c \
 	| grep -v '^      1 '; then
-	echo "Dos have duplicate commit messages, disapproving"
+	echo "Does have duplicate commit messages, disapproving"
+	disapprove=WIP
+fi
+if [[ "$RELEASE" =~ test\|wip ]]; then
+	echo "Seems to be work-in-progress release, disapproving"
 	disapprove=WIP
 fi
 
