@@ -192,6 +192,23 @@ else
 fi
 unset tasks_ls
 
+wait_state() {
+	local -i count=0
+	while true; do
+		task_state=$(curl -sSf "https://git.altlinux.org/tasks/$task_id/task/state")
+		case "$task_state" in
+			FAILED | NEW | TESTED | EPERM) return ;;
+		esac
+		if [[ $count -eq 0 ]]; then
+			echo "Task $task_id is in unmodifiable state $task_state, waiting..."
+		fi
+		local elapsed
+		printf -v elapsed "%d:%02d" $((count/60)) $((count%60))
+		gum spin --title="[state=$task_state, elapsed $elapsed] Waiting..." sleep 60
+		count+=1
+	done
+}
+
 task_state=
 declare -i sub_count=0
 if [ -z "$task_id" ]; then
@@ -201,10 +218,7 @@ if [ -z "$task_id" ]; then
 	task_show=
 else
 	task_state=$(echo "$task_matched" | cut -d' ' -f2)
-	case "$task_state" in
-		FAILED | NEW | TESTED | EPERM) ;;
-		*) fatal "Task $task_id is in unmodifable state $task_state."
-	esac
+	wait_state
 	task_show=$(ssh -n "$girar" task show --brief "$task_id")
 	sub_count=$(echo "$task_show" | grep -E '^[[:space:]]*[[:digit:]]+:' -c)
 fi
