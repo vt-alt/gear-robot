@@ -97,11 +97,18 @@ repo=$(basename "$url")
 name=$(basename "$repo" '.git')
 dir_repo=${url##*:}
 
+gear_describe() {
+        # shellcheck disable=SC2046
+        set -- $(gear --describe --disable-specsubst)
+        export NAME=$1 VERSION=$2 RELEASE=$3
+}
+gear_describe
+
 # Check existence of the package.
 if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
-	indexurl="$indexbase/${name:0:1}/$name/d-t-s-evr.list"
+	indexurl="$indexbase/${NAME:0:1}/$NAME/d-t-s-evr.list"
 	if ! dts_list=$(curl -sSfL "$indexurl"); then
-		echo "Package $name not found in $branch."
+		echo "Package $NAME not found in $branch."
 	else
 		if echo "$dts_list" | awk "\$4 == \"$tag\"" | grep .; then
 			# Just informational and superseded by the following check.
