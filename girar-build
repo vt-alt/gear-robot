@@ -115,7 +115,7 @@ if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
 			# Just informational and superseded by the following check.
 			echo "The same version $tag is already committed to $branch"
 		fi
-		lastbuild=$(echo "$dts_list" | tail -1)
+		lastbuild=$(echo "$dts_list" | awk '$4 != "-"' | tail -1)
 		lastver=$(echo "$lastbuild" | cut -f4)
 		cmp=$(rpmevrcmp "$tag" "$lastver")
 		if [ "$cmp" -eq -1 ]; then
@@ -127,10 +127,13 @@ if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
 		else
 			fatal "Version comparison error $tag vs $lastver = $cmp"
 		fi
+		lastbuild=$(echo "$dts_list" | tail -1)
 		lastgear=$(echo "$lastbuild" | cut -f5)
-		lastgear=${lastgear#gear:}
-		lasttag=$(git cat-file -p "$lastgear" | grep -m1 '^tag ')
-		lasttag=${lasttag#tag }
+		if [ -n "$lastgear" ]; then
+			lastgear=${lastgear#gear:}
+			lasttag=$(git cat-file -p "$lastgear" | grep -m1 '^tag ')
+			lasttag=${lasttag#tag }
+		fi
 	fi
 fi
 
