@@ -80,12 +80,25 @@ if ! git config "remote.$gitery.url" >& /dev/null; then
 	V git remote add "$gitery" "$gitery:packages/${topname}.git"
 fi
 
+gear_describe() {
+        # shellcheck disable=SC2046
+        set -- $(gear --describe --disable-specsubst)
+        export NAME=$1 VERSION=$2 RELEASE=$3
+}
+gear_describe
+
 if [ -z "${tag-}" ]; then
 	tag=( $(git tag --points-at @ '*-alt*') )
 	if [ ${#tag[@]} -gt 1 ]; then
 		fatal "Too many -alt tags: ${tag[*]}."
 	elif [ ${#tag[@]} -ne 1 ]; then
-		fatal "Top level -alt tag is not found."
+		echo "${BLUE}Top level commit is not tagged with -alt tag!$NORM"
+		havetag=$(git tag -l "$VERSION-$RELEASE")
+		[ -n "$havetag" ] && [ -z "$force" ] && fatal "Run with -f to force new tag"
+		gum confirm "Run gear-create-tag $force?"
+		gear-create-tag $force
+		unset havetag
+		tag=( $(git tag --points-at @ "$VERSION-$RELEASE") )
 	fi
 	tag_id=$(git show-ref --tags "$tag" | cut -d' ' -f1)
 	[ -n "$tag_id" ] || fatal "tag_id empty."
@@ -96,13 +109,6 @@ url=$(git remote get-url "$gitery")
 repo=$(basename "$url")
 name=$(basename "$repo" '.git')
 dir_repo=${url##*:}
-
-gear_describe() {
-        # shellcheck disable=SC2046
-        set -- $(gear --describe --disable-specsubst)
-        export NAME=$1 VERSION=$2 RELEASE=$3
-}
-gear_describe
 
 # Check existence of the package.
 unset lastbuild lastver lastgear lasttag
