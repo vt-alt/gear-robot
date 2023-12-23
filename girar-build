@@ -137,6 +137,23 @@ if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
 	fi
 fi
 
+# Is this WiP build?
+if [ -n "${lasttag-}" ]; then
+	selector="$lasttag.."
+else
+	selector="--author=altlinux"
+fi
+if git log --format='%m %h %ad %s' --date=short --first-parent $selector \
+	| grep --color=auto -iP '\b(wip|test)\b'; then
+	echo "Seems to be work-in-progress build, disapproving"
+	disapprove=y
+fi
+if git log --format='%s' --first-parent $selector | sort | uniq -c \
+	| grep -v '^      1 '; then
+	echo "Dos have duplicate commit messages, disapproving"
+	disapprove=y
+fi
+
 V git push "$gitery" "$tag" $force
 
 # Determine target task number
