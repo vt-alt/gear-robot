@@ -167,6 +167,9 @@ elif [ -n "$newtask" ]; then
 else
 	# Use heuristic to search for appropriate task.
 	tasks_ls=$(ssh -n "$girar" task ls)
+	if [ -s ~/.task-lock ]; then
+		tasks_ls=$(echo "$tasks_ls" | grep -v -w -f ~/.task-lock)
+	fi
 	task_matched=$(echo "$tasks_ls" | grep -m1 -w -F "$repo=$tag" || :)
 	if [ -n "$task_matched" ]; then
 		if [ "$(echo "$task_matched" | wc -l)" -ne 1 ]; then
