@@ -52,7 +52,7 @@ while [ $# -gt 0 ]; do
 		--task=*) task_id=${opt#*=} ;;
 		--e2k ) e2k=y ;;
 		--repo=*) branch=${opt#*=} ;;
-		--dis* | --test ) disapprove=y ;;
+		--dis* | --test ) disapprove=TEST ;;
 		--tag=*) tag=${opt#*=} ;;
 		--skip-repo-check) skip_repo_check=y ;;
 		*) fatal "Unknown option: $opt" ;;
@@ -152,12 +152,12 @@ fi
 if git log --format='%m %h %ad %s' --date=short --first-parent $selector \
 	| grep --color=auto -iP '\b(wip|test)\b'; then
 	echo "Seems to be work-in-progress build, disapproving"
-	disapprove=y
+	disapprove=WIP
 fi
 if git log --format='%s' --first-parent $selector | sort | uniq -c \
 	| grep -v '^      1 '; then
 	echo "Dos have duplicate commit messages, disapproving"
-	disapprove=y
+	disapprove=WIP
 fi
 
 V git push "$gitery" "$tag" $force
@@ -272,7 +272,7 @@ sub_count+=1
 
 if [ -n "$disapprove" ]; then
 	subtask=$(ssh -n "$girar" task show --brief "$task_id" | grep -F ":$repo=$tag" | grep -Po '^\s\K\d+')
-	echo COMMIT BARRIER | V ssh girar task disapprove "$task_id" "$subtask"
+	echo "$disapprove" | V ssh girar task disapprove "$task_id" "$subtask"
 fi
 
 task_run "$task_id"
