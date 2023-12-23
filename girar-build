@@ -105,6 +105,7 @@ gear_describe() {
 gear_describe
 
 # Check existence of the package.
+unset lastbuild lastver lastgear lasttag
 if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
 	indexurl="$indexbase/${NAME:0:1}/$NAME/d-t-s-evr.list"
 	if ! dts_list=$(curl -sSfL "$indexurl"); then
@@ -114,7 +115,8 @@ if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
 			# Just informational and superseded by the following check.
 			echo "The same version $tag is already committed to $branch"
 		fi
-		lastver=$(echo "$dts_list" | tail -1 | cut -f4)
+		lastbuild=$(echo "$dts_list" | tail -1)
+		lastver=$(echo "$lastbuild" | cut -f4)
 		cmp=$(rpmevrcmp "$tag" "$lastver")
 		if [ "$cmp" -eq -1 ]; then
 			fatal "There is newer version $lastver > $tag already in $branch"
@@ -125,6 +127,10 @@ if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
 		else
 			fatal "Version comparison error $tag vs $lastver = $cmp"
 		fi
+		lastgear=$(echo "$lastbuild" | cut -f5)
+		lastgear=${lastgear#gear:}
+		lasttag=$(git cat-file -p "$lastgear" | grep -m1 '^tag ')
+		lasttag=${lasttag#tag }
 	fi
 fi
 
