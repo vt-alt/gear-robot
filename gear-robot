@@ -170,8 +170,9 @@ update_git_subtrees() {
 	# Merge subtrees.
 	if [ -s .gear/subtrees ]; then
 		local prefix remote branch args
-		while read prefix remote branch args; do
+		while read -r prefix remote branch args; do
 			branch=${branch:-master}
+			# shellcheck disable=SC2086
 			V git subtree pull -P "$prefix" "$remote" "$branch" $args -m "Pull subtree $prefix from $remote $branch"
 		done < .gear/subtrees
 	fi
@@ -225,12 +226,12 @@ update_from_git_origin() {
 			#   gpg: WARNING: Using untrusted key!
 			echo "quiet" >> $GNUPGHOME/gpg.conf
 			what=$(git cat-file -t "$tag")
-			V git verify-$what "$tag"
+			V git "verify-$what" "$tag"
 			printf -- "Merge signed %s '%s' into %s\n\n%s" \
 				"$what" \
 				"$tag" \
 				"$(git branch --show-current)" \
-				"$(git verify-$what "$tag" |& sed 's/^/# /')" > "$msg"
+				"$(git "verify-$what" "$tag" |& sed 's/^/# /')" > "$msg"
 			cleanup=--cleanup=whitespace
 			tagstate=VERIFIED
 		else
@@ -351,6 +352,7 @@ else
 	info "Top tag is $tag ($tagstate), Version: $ver"
 fi
 if [[ ! "$ver" =~ ^[[:digit:]]+(.[[:digit:]]+)*$ ]]; then
+	# shellcheck disable=SC2015
 	[ -v allow_rc ] && disapprove=y || fatal "Unknown version format: $ver"
 fi
 
