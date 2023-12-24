@@ -34,6 +34,16 @@ done
 task_id=${1?need task id argument}
 task_try=${2-1}
 
+declare -i sleepmin=11 sleepmax=600
+declare -i sleepfor=$sleepmin
+update_sleep_time() {
+	if [ "$1" = reset ]; then
+		sleepfor=$sleepmin
+	elif [ "$sleepfor" -lt "$sleepmax" ]; then
+		sleepfor+=$1
+	fi
+}
+
 logtmp=$(mktemp) && trap "rm -- $logtmp" 0
 task_url="https://git.altlinux.org/tasks/$task_id"
 events_log=
@@ -53,6 +63,8 @@ show_events_log() {
 		-e "s/.*(TESTED|DONE).*/$GREEN&$NORM/" \
 		-e "s/\b(OK|ALLOWED)\b/$GREEN&$NORM/" \
 
+	update_sleep_time reset
+	sleepfor=$sleepmin
 	log_lines=$(wc -l < "$logtmp")+1
 }
 iterate_over_logs() {
@@ -67,6 +79,7 @@ iterate_over_logs() {
 }
 
 wait_inactive_state() {
+	update_sleep_time 1
 	local oldstate=$state
 	state=$(curl -sSLf "$task_url/task/state")
 	case "$state" in
@@ -90,11 +103,11 @@ wait_inactive_state() {
 if [ -n "$waitstate" ]; then
 	while true; do
 		wait_inactive_state
-		gum spin --title="Waiting while $state..." sleep 11
+		gum spin --title="Waiting while $state..." sleep "$sleepfor"
 	done
 else
 	while true; do
 		iterate_over_logs
-		gum spin --title="Waiting on $events_log..." sleep 11
+		gum spin --title="Waiting on $events_log..." sleep "$sleepfor"
 	done
 fi
