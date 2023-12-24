@@ -37,10 +37,13 @@ disapprove=
 task_id=
 baseurl=
 skip_repo_check=
+taillogs=
 while [ $# -gt 0 ]; do
 	opt=$1
 	case "$opt" in
 		-f | --force) force=-f ;;
+		--tail) taillogs=--tail ;;
+		--wait) taillogs=--wait ;;
 		--commit) commit=--commit ;;
 		-n | --no-run) norun=y ;;
 		--dry | --dry-run) dryrun=--dry-run ;;
@@ -220,11 +223,13 @@ if [ -z "$task_id" ]; then
 	task_id=$(V ssh -n "$girar" task new $branch)
 	echo >&2 "- Creating new task $task_id"
 	task_show=
+	task_try=1
 else
 	task_state=$(echo "$task_matched" | cut -d' ' -f2)
 	wait_state
 	task_show=$(ssh -n "$girar" task show --brief "$task_id")
 	sub_count=$(echo "$task_show" | grep -E '^[[:space:]]*[[:digit:]]+:' -c)
+	task_try=$(echo "$task_show" | head -1 | grep -oP '(?<=\btry=)\d+')
 fi
 unset task_matched
 unset task_state
@@ -294,3 +299,7 @@ if [ -n "$disapprove" ]; then
 fi
 
 task_run "$task_id"
+
+if [ -n "$taillogs" ]; then
+	task-tail "$taillogs" "$task_id" "$task_try"
+fi

@@ -3,14 +3,35 @@
 
 set -efu -o pipefail
 export LANG=C LC_ALL=C
+
    RED=$'\e[1;31m'
  GREEN=$'\e[1;32m'
   BLUE=$'\e[1;34m'
   NORM=$'\e[m'
 export RED GREEN BLUE NORM
 
-taillogs=y
-task_id=$1
+fatal() {
+	printf >&2 "${RED}Error: %s${NORM}\n" "$*"
+	exit 1
+}
+
+taillogs=
+waitstate=
+state=
+
+while [ $# -gt 0 ]; do
+	opt=$1
+	case "$opt" in
+		--tail) taillogs=y ;;
+		--wait) waitstate=y ;;
+		--state=*) state=${opt#*=} ;;
+		-*) fatal "Unknown option: $opt" ;;
+		*) break ;;
+	esac
+	shift
+done
+
+task_id=${1?need task id argument}
 task_try=${2-1}
 
 logtmp=$(mktemp) && trap "rm -- $logtmp" 0
@@ -35,28 +56,45 @@ show_events_log() {
 	log_lines=$(wc -l < "$logtmp")+1
 }
 iterate_over_logs() {
-	local last_try=$(curl -sSf "$task_url/task/try")
+	local last_try=$(curl -sSLf "$task_url/task/try")
 	for ((t=$task_try;t<=$last_try;t++)); do
 		for ((i=$task_iter;;i++)); do
 			show_events_log "events.$t.$i.log" || break
 		done
 	done
 	task_try=$last_try
-	local state=$(curl -sSf "$task_url/task/state")
+	wait_inactive_state
+}
+
+wait_inactive_state() {
+	local oldstate=$state
+	state=$(curl -sSLf "$task_url/task/state")
 	case "$state" in
 		AWAITING|BUILDING|COMMITTING|FAILING|PENDING)
+			if [ "$state" != "$oldstate" ] && [ -n "$oldstate" ]; then
+				echo "- Task entered new active state $state."
+			fi
 			return 0
 			;;
 		DONE|EPERM|FAILED|NEW|POSTPONED|SWEPT|TESTED)
 			echo "- Task is in inactive state $state, exiting."
 			return 1
 			;;
+		*)
+			echo "- Task in unknown state $state."
+			return 0
+			;;
 	esac
 }
 
-if [ -n "$taillogs" ]; then
+if [ -n "$waitstate" ]; then
+	while true; do
+		wait_inactive_state
+		gum spin --title="Waiting while $state..." sleep 11
+	done
+else
 	while true; do
 		iterate_over_logs
-		gum spin --title="Waiting on $events_log..." sleep 3
+		gum spin --title="Waiting on $events_log..." sleep 11
 	done
 fi
