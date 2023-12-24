@@ -1,5 +1,5 @@
 #!/bin/bash
-# shellcheck disable=SC2207,SC2128,SC2001,SC2046,SC2029,SC2059
+# shellcheck disable=SC2207,SC2128,SC2001,SC2046,SC2029,SC2059,SC2155
 
 set -efu -o pipefail
 export LANG=C LC_ALL=C
@@ -22,7 +22,7 @@ state=
 while [ $# -gt 0 ]; do
 	opt=$1
 	case "$opt" in
-		--tail) taillogs=y ;;
+		--tail) export taillogs=y ;;
 		--wait) waitstate=y ;;
 		--state=*) state=${opt#*=} ;;
 		-*) fatal "Unknown option: $opt" ;;
@@ -44,7 +44,7 @@ update_sleep_time() {
 	fi
 }
 
-logtmp=$(mktemp) && trap "rm -- $logtmp" 0
+logtmp=$(mktemp) && trap 'rm -- $logtmp' 0
 task_url="https://git.altlinux.org/tasks/$task_id"
 events_log=
 declare -i log_lines=0 task_iter=1
@@ -74,8 +74,8 @@ iterate_over_logs() {
 		task_try=$last_try
 		task_iter=$(curl -sSLf "$task_url/task/iter")
 	fi
-	for ((t=$task_try;t<=$last_try;t++)); do
-		for ((i=$task_iter;;i++)); do
+	for ((t=task_try;t<=last_try;t++)); do
+		for ((i=task_iter;;i++)); do
 			show_events_log "events.$t.$i.log" || break
 		done
 	done
