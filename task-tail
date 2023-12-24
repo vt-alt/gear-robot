@@ -4,11 +4,12 @@
 set -efu -o pipefail
 export LANG=C LC_ALL=C
 
-   RED=$'\e[1;31m'
- GREEN=$'\e[1;32m'
-  BLUE=$'\e[1;34m'
-  NORM=$'\e[m'
-export RED GREEN BLUE NORM
+     RED=$'\e[1;31m'
+   GREEN=$'\e[1;32m'
+    BLUE=$'\e[1;34m'
+ MAGENTA=$'\e[1;35m'
+    NORM=$'\e[m'
+export RED GREEN BLUE MAGENTA NORM
 
 fatal() {
 	printf >&2 "${RED}Error: %s${NORM}\n" "$*"
@@ -59,6 +60,7 @@ show_events_log() {
 	fi
 	tail -n+"$log_lines" "$logtmp" \
 		| sed -E \
+		-e "s/(^\[\w+\])(.*)/$NORM\1$MAGENTA\2$NORM/" \
 		-e "s/.*(ERROR|FAIL|FATAL).*/$RED&$NORM/" \
 		-e "s/.*(TESTED|DONE).*/$GREEN&$NORM/" \
 		-e "s/\b(OK|ALLOWED)\b/$GREEN&$NORM/" \
