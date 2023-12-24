@@ -35,7 +35,6 @@ gitery=
 branch=sisyphus
 disapprove=
 task_id=
-baseurl=
 skip_repo_check=
 taillogs=
 while [ $# -gt 0 ]; do
@@ -110,7 +109,6 @@ fi
 # Remote repo name
 url=$(git remote get-url "$gitery")
 repo=$(basename "$url")
-name=$(basename "$repo" '.git')
 dir_repo=${url##*:}
 
 # Check existence of the package.
@@ -152,11 +150,13 @@ if [ -n "${lasttag-}" ]; then
 else
 	selector="--author=altlinux"
 fi
+# shellcheck disable=SC2086
 if git log --format='%m %h %ad %s' --date=short --first-parent $selector \
 	| grep --color=auto -iP '\b(wip|test)\b'; then
 	echo "Seems to be work-in-progress build, disapproving"
 	disapprove=WIP
 fi
+# shellcheck disable=SC2086
 if git log --format='%s' --first-parent $selector | sort | uniq -c \
 	| grep -v '^      1 '; then
 	echo "Does have duplicate commit messages, disapproving"
