@@ -32,7 +32,7 @@ while [ $# -gt 0 ]; do
 done
 
 task_id=${1?need task id argument}
-task_try=${2-1}
+task_try=${2-}
 
 declare -i sleepmin=11 sleepmax=600
 declare -i sleepfor=$sleepmin
@@ -69,6 +69,11 @@ show_events_log() {
 }
 iterate_over_logs() {
 	local last_try=$(curl -sSLf "$task_url/task/try")
+	# If user not specified 'try' argument, do not start from beginning.
+	if [ -z "$task_try" ]; then
+		task_try=$last_try
+		task_iter=$(curl -sSLf "$task_url/task/iter")
+	fi
 	for ((t=$task_try;t<=$last_try;t++)); do
 		for ((i=$task_iter;;i++)); do
 			show_events_log "events.$t.$i.log" || break
