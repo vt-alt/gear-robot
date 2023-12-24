@@ -263,6 +263,10 @@ task_run() {
 	fi
 	[ -z "$norun" ] || return
 	V ssh -n "$girar" task run $dryrun $commit $failwhen $hurry "$task_id"
+
+	if [ -n "$taillogs" ]; then
+		task-tail "$taillogs" "$task_id" "$task_try"
+	fi
 }
 
 if [ -n "$subtask" ]; then
@@ -299,7 +303,3 @@ if [ -n "$disapprove" ]; then
 fi
 
 task_run "$task_id"
-
-if [ -n "$taillogs" ]; then
-	task-tail "$taillogs" "$task_id" "$task_try"
-fi
