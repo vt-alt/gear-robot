@@ -118,7 +118,7 @@ if [ -n "$waitstate" ]; then
 else
 	while true; do
 		iterate_over_logs
-		gum spin --title="Waiting on $events_log..." sleep "$sleepfor"
+		gum spin --title="Waiting on $events_log while $state..." sleep "$sleepfor"
 		update_sleep_time
 	done
 fi
