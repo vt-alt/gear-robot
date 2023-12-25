@@ -35,13 +35,16 @@ done
 task_id=${1?need task id argument}
 task_try=${2-}
 
-declare -i sleepmin=11 sleepmax=600
+declare -i sleepmin=5 sleepmax=60
 declare -i sleepfor=$sleepmin
 update_sleep_time() {
-	if [ "$1" = reset ]; then
+	if [ "${1-}" = '--reset' ]; then
 		sleepfor=$sleepmin
-	elif [ "$sleepfor" -lt "$sleepmax" ]; then
-		sleepfor+=$1
+	elif [[ sleepfor -lt sleepmax ]]; then
+		local -i step=11
+		# shellcheck disable=SC2034
+		[[ sleepfor -gt 30 ]] || step=5
+		sleepfor+=step
 	fi
 }
 
@@ -65,9 +68,9 @@ show_events_log() {
 		-e "s/.*(TESTED|DONE).*/$GREEN&$NORM/" \
 		-e "s/\b(OK|ALLOWED)\b/$GREEN&$NORM/" \
 
-	update_sleep_time reset
-	sleepfor=$sleepmin
+	local -i lines=log_lines
 	log_lines=$(wc -l < "$logtmp")+1
+	[[ log_lines -eq lines ]] || update_sleep_time --reset
 }
 iterate_over_logs() {
 	local last_try=$(curl -sSLf "$task_url/task/try")
@@ -86,7 +89,6 @@ iterate_over_logs() {
 }
 
 wait_inactive_state() {
-	update_sleep_time 1
 	local oldstate=$state
 	state=$(curl -sSLf "$task_url/task/state")
 	case "$state" in
@@ -111,10 +113,12 @@ if [ -n "$waitstate" ]; then
 	while true; do
 		wait_inactive_state
 		gum spin --title="Waiting while $state..." sleep "$sleepfor"
+		update_sleep_time
 	done
 else
 	while true; do
 		iterate_over_logs
 		gum spin --title="Waiting on $events_log..." sleep "$sleepfor"
+		update_sleep_time
 	done
 fi
