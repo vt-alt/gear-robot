@@ -36,13 +36,14 @@ branch=sisyphus
 disapprove=
 task_id=
 skip_repo_check=
-taillogs=
+taillogs=--tail
 while [ $# -gt 0 ]; do
 	opt=$1
 	case "$opt" in
 		-f | --force) force=-f ;;
 		--tail) taillogs=--tail ;;
-		--wait) taillogs=--wait ;;
+		-w | --wait) taillogs=--wait ;;
+		-W | --no-wait | --no-tail) taillogs= ;;
 		--commit) commit=--commit ;;
 		-n | --no-run) norun=y ;;
 		--dry | --dry-run) dryrun=--dry-run ;;
