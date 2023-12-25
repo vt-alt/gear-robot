@@ -19,6 +19,7 @@ fatal() {
 taillogs=
 waitstate=
 state=
+select=
 
 while [ $# -gt 0 ]; do
 	opt=$1
@@ -26,6 +27,7 @@ while [ $# -gt 0 ]; do
 		--tail) export taillogs=y ;;
 		--wait) waitstate=y ;;
 		--state=*) state=${opt#*=} ;;
+		-i) select=y ;;
 		-*) fatal "Unknown option: $opt" ;;
 		*) break ;;
 	esac
@@ -41,7 +43,12 @@ fi
 cd "$toplevel"
 
 TASKLIST=.git/.girar-build
-if [ $# -gt 0 ]; then
+if [ -n "$select" ]; then
+	taskls=$(ssh -n "${1-girar}" task ls | fzf)
+	taskls=${taskls%% *}
+	task_id=${taskls#"#"}
+	task_try=
+elif [ $# -gt 0 ]; then
 	task_id=$1
 	task_try=${2-}
 elif [ -s "$TASKLIST" ]; then
