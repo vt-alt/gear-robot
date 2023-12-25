@@ -92,16 +92,16 @@ wait_inactive_state() {
 	case "$state" in
 		AWAITING|BUILDING|COMMITTING|FAILING|PENDING)
 			if [ "$state" != "$oldstate" ] && [ -n "$oldstate" ]; then
-				echo "- Task entered new active state $state."
+				echo "- Task entered active state $state."
 			fi
 			return 0
 			;;
 		DONE|EPERM|FAILED|NEW|POSTPONED|SWEPT|TESTED)
-			echo "- Task is in inactive state $state, exiting."
+			echo "- Task entered inactive state $state."
 			return 1
 			;;
 		*)
-			echo "- Task in unknown state $state."
+			echo "- Task entered unknown state $state."
 			return 0
 			;;
 	esac
