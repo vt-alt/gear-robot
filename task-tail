@@ -32,8 +32,30 @@ while [ $# -gt 0 ]; do
 	shift
 done
 
-task_id=${1?need task id argument}
-task_try=${2-}
+toplevel=$(git rev-parse --show-toplevel 2>/dev/null ||:)
+if [ -z "$toplevel" ]; then
+	cd -P ~/.girar-build-repo
+	echo "- cd $PWD"
+	toplevel=$PWD
+fi
+cd "$toplevel"
+
+TASKLIST=.git/.girar-build
+if [ $# -gt 0 ]; then
+	task_id=$1
+	task_try=${2-}
+elif [ -s "$TASKLIST" ]; then
+	PPIDID=$PPID:$(date -r "/proc/$PPID" +%s)
+	task_id=$(awk "\$3 == \"$PPIDID\" {print\$1}" "$TASKLIST" | tail -1)
+	if [ -n "$task_id" ]; then
+		echo "- Last task in this shell $task_id"
+	else
+		task_id=$(tail -1 "$TASKLIST" | cut -f1)
+		echo "- Last task in this repo $task_id"
+	fi
+	task_try=
+fi
+[ -z "${task_id-}" ] && fatal "Unknown task id"
 
 declare -i sleepmin=5 sleepmax=60
 declare -i sleepfor=$sleepmin

@@ -235,6 +235,13 @@ fi
 unset task_matched
 unset task_state
 
+# Record last new task for this gear package:
+#   task_id \t date \t shell_pid:ts \t try
+PPIDID=$PPID:$(date -r "/proc/$PPID" +%s)
+TS=$(date --iso-8601=minutes)
+printf "%s\t%s\t%s\t%s\n" "$task_id" "$TS" "$PPIDID" "$task_try" >> .git/.girar-build
+ln -srf "$PWD" -T "$HOME/.girar-build-repo"
+
 subtask=
 nexttask=
 if [ -n "$task_show" ]; then
