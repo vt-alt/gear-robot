@@ -116,7 +116,7 @@ dir_repo=${url##*:}
 unset lastbuild lastver lastgear lasttag
 if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
 	indexurl="$indexbase/${NAME:0:1}/$NAME/d-t-s-evr.list"
-	if ! dts_list=$(curl -sSfL "$indexurl"); then
+	if ! dts_list=$(curl -sSfL "$indexurl" 2>/dev/null); then
 		echo "Package $NAME not found in $branch."
 	else
 		if echo "$dts_list" | awk "\$4 == \"$tag\"" | grep .; then
