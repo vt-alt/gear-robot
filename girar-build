@@ -182,6 +182,12 @@ if sed -n '/^%changelog/,/^$/s/^-/&/p' "$specfile" | grep --color=auto -iP '\b(w
 	disapprove=WIP
 fi
 
+# Check spelunking.
+# shellcheck disable=SC2086
+if ! git log -s --format=%B --committer=altlinux $selector | codespell -; then
+	gum confirm "codespell errors in commit messages, continue?"
+fi
+
 V git push "$gitery" "$tag" $force
 
 # Determine target task number
