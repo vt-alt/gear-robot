@@ -188,6 +188,26 @@ if ! git log -s --format=%B --committer=altlinux $selector | codespell -; then
 	gum confirm "codespell errors in commit messages, continue?"
 fi
 
+# Check megacommits.
+onlymatches() {
+	# There should not be other lines than matched.
+	local sha=$1 msg=$2 re=$3
+	if echo "$msg" | grep -qP -e "$re"; then
+		if echo "$msg" | grep -qP -ve "$re"; then
+			echo "- Commit $sha is megacommit ($re)"
+			git show --stat "$sha"
+			fatal "Megacommit found."
+		fi
+	fi
+}
+
+# shellcheck disable=SC2086
+git rev-list --abbrev-commit --committer=altlinux $selector \
+| while read -r sha; do
+	dt=$(git diff-tree --no-commit-id --name-only -r "$sha")
+	onlymatches "$sha" "$dt" '^\.gear/|\.spec$|\.patch$'
+done
+
 V git push "$gitery" "$tag" $force
 
 # Determine target task number
