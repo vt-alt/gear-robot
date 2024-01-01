@@ -85,7 +85,9 @@ declare -i log_lines=0 task_iter=1
 show_events_log() {
 	local log=$1
 	local url="$task_url/logs/$log"
-	curl -sSLf "$url" -o "$logtmp" 2>/dev/null || return 1
+	local cont=
+	[ "$log" = "$events_log" ] && cont=-C-
+	curl -sSLf "$url" $cont -o "$logtmp" 2>/dev/null || return 1
 	if [ "$log" != "$events_log" ]; then
 		echo "${BLUE}=== $log ===${NORM}"
 		events_log=$log
