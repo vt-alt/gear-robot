@@ -133,6 +133,11 @@ dir_repo=${url##*:}
 
 # Determine actual version (with epoch) from first %changelog entry.
 cl=$(sed -n '/^%changelog/,/^$/s/^*/&/p' "$specfile")
+if [ $(echo "$cl" | wc -l) -ne 1 ]; then
+	warn "Something wrong finding first %changelog entry."
+	echo "$cl" | head >&2
+	exit 1
+fi
 evr=${cl%[[:space:]]}
 evr=${evr##*[[:space:]]}
 ver=${evr#*:}
