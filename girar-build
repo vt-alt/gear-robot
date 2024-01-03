@@ -7,13 +7,15 @@
 set -efu -o pipefail
 export LANG=C LC_ALL=C
 
+ BRIGHT=$'\e[1m'
     RED=$'\e[1;31m'
   GREEN=$'\e[1;32m'
  DGREEN=$'\e[32m'
+ YELLOW=$'\e[1;33m'
    BLUE=$'\e[1;34m'
 MAGENTA=$'\e[1;35m'
    NORM=$'\e[m'
-export RED DGREEN GREEN BLUE NORM
+export BRIGHT RED DGREEN GREEN YELLOW BLUE NORM
 
 export GUM_CONFIRM_SELECTED_FOREGROUND=0
 
@@ -24,8 +26,11 @@ V() {
         "$@"
 }
 
+warn() {
+	printf >&2 "${RED}Error: %s${NORM}\n" "$@"
+}
 fatal() {
-	printf >&2 "${RED}Error: %s${NORM}\n" "$*"
+	warn "$@"
 	exit 1
 }
 
