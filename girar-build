@@ -7,11 +7,13 @@
 set -efu -o pipefail
 export LANG=C LC_ALL=C
 
-   RED=$'\e[1;31m'
- GREEN=$'\e[1;32m'
-  BLUE=$'\e[1;34m'
-  NORM=$'\e[m'
-export RED GREEN BLUE NORM
+    RED=$'\e[1;31m'
+  GREEN=$'\e[1;32m'
+ DGREEN=$'\e[32m'
+   BLUE=$'\e[1;34m'
+MAGENTA=$'\e[1;35m'
+   NORM=$'\e[m'
+export RED DGREEN GREEN BLUE NORM
 
 export GUM_CONFIRM_SELECTED_FOREGROUND=0
 
@@ -352,6 +354,11 @@ if [ -n "$subtask" ]; then
 	task_tag_id=$(echo "$subtext" | grep -Po '^\s*\d+:tag_id=\K.*') \
 		|| fatal "tag_id not found in subtask $subtask of $task_id."
 
+	if [[ sub_count -eq 1 ]]; then
+		echo >&2 "${DGREEN}Subtask [$subtask] found, there no other subtasks.$NORM"
+	else
+		echo >&2 "${MAGENTA}Subtask ($subtask) found, there $((sub_count-1)) other subtasks.$NORM"
+	fi
 	if [ "$tag_id" = "$task_tag_id" ]; then
 		echo >&2 "${BLUE}tag_id for subtask is the same as ours, no need to re-add.${NORM}"
 		echo >&2
