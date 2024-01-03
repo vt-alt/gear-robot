@@ -242,13 +242,21 @@ unset tasks_ls
 
 wait_state() {
 	local -i count=0
+	local ttype
 	while true; do
 		task_state=$(curl -sSf "https://git.altlinux.org/tasks/$task_id/task/state")
+		ttype=unmodifiable
 		case "$task_state" in
 			FAILED | NEW | TESTED | EPERM) return ;;
+			AWAITING | POSTPONED)
+				# These are unlocked states but we cannot rely on them
+				# because of possible races if they suddenly change. User
+				# should abort such task first.
+				ttype=racy
+				;;
 		esac
 		if [[ $count -eq 0 ]]; then
-			echo "Task $task_id is in unmodifiable state $task_state, waiting..."
+			echo "Task $task_id is in $ttype state $task_state, waiting..."
 		fi
 		local elapsed
 		printf -v elapsed "%d:%02d" $((count/60)) $((count%60))
