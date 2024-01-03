@@ -140,10 +140,17 @@ colorize_state() {
 }
 cstate=$(colorize_state "$state")
 
-wait_inactive_state() {
-	local oldstate=$state
+update_state() {
 	state=$(curl -sSLf "$task_url/task/state" | head -1)
 	cstate=$(colorize_state "$state")
+}
+
+[ -n "$state" ] || update_state
+first_state=$state
+
+wait_inactive_state() {
+	local oldstate=$state
+	update_state
 	case "$state" in
 		AWAITING|BUILDING|COMMITTING|FAILING|PENDING)
 			if [ "$state" != "$oldstate" ] && [ -n "$oldstate" ]; then
@@ -164,14 +171,17 @@ wait_inactive_state() {
 
 if [ -n "$waitstate" ]; then
 	while true; do
-		wait_inactive_state
+		wait_inactive_state || break
 		gum spin --title="Waiting while $cstate..." sleep "$sleepfor"
 		update_sleep_time
 	done
 else
 	while true; do
-		iterate_over_logs
+		iterate_over_logs || break
 		gum spin --title="Waiting on $events_log while $cstate..." sleep "$sleepfor"
 		update_sleep_time
 	done
+fi
+if [ "$state" != "$first_state" ]; then
+	toilet "${state,,}" | lolcat
 fi
