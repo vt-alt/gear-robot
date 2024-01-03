@@ -6,6 +6,7 @@ export LANG=C LC_ALL=C
 
   BRIGHT=$'\e[1m'
      RED=$'\e[1;31m'
+  _GREEN=$'\e[32m'
    GREEN=$'\e[1;32m'
   YELLOW=$'\e[1;33m'
     BLUE=$'\e[1;34m'
@@ -102,6 +103,7 @@ show_events_log() {
 		-e "s/(^\[\w+\])(.*)/$NORM\1$MAGENTA\2$NORM/" \
 		-e "s/.*(ERROR|FAIL|FATAL).*/$RED&$NORM/" \
 		-e "s/.*(TESTED|DONE).*/$GREEN&$NORM/" \
+		-e "/(cached)/s/\bOK\b/$_GREEN&$NORM/" \
 		-e "s/\b(OK|ALLOWED)\b/$GREEN&$NORM/" \
 
 	local -i lines=log_lines
