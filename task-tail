@@ -83,7 +83,7 @@ update_sleep_time() {
 
 logtmp=$(mktemp) && trap 'rm -- $logtmp' 0
 task_url="https://git.altlinux.org/tasks/$task_id"
-echo "- $task_url/"
+echo "- $BRIGHT$task_url/$NORM"
 events_log=
 declare -i log_lines=0 task_iter=1
 show_events_log() {
