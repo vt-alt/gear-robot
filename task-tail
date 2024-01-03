@@ -126,7 +126,7 @@ iterate_over_logs() {
 
 wait_inactive_state() {
 	local oldstate=$state
-	state=$(curl -sSLf "$task_url/task/state")
+	state=$(curl -sSLf "$task_url/task/state" | cat -v)
 	case "$state" in
 		AWAITING|BUILDING|COMMITTING|FAILING|PENDING)
 			if [ "$state" != "$oldstate" ] && [ -n "$oldstate" ]; then
