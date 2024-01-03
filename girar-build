@@ -254,6 +254,10 @@ wait_state() {
 				# should abort such task first.
 				ttype=racy
 				;;
+			DONE)
+				echo "Task $task_id is in immutable state $task_state, exiting."
+				exit 1
+				;;
 		esac
 		if [[ $count -eq 0 ]]; then
 			echo "Task $task_id is in $ttype state $task_state, waiting..."
@@ -276,6 +280,7 @@ if [ -z "$task_id" ]; then
 else
 	task_state=$(echo "$task_matched" | cut -d' ' -f2)
 	wait_state
+	# TODO: It's possible that task became unmatched after this.
 	task_show=$(ssh -n "$girar" task show --brief "$task_id")
 	sub_count=$(echo "$task_show" | grep -E '^[[:space:]]*[[:digit:]]+:' -c)
 	task_try=$(echo "$task_show" | head -1 | grep -oP '(?<=\btry=)\d+')
