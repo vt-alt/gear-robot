@@ -124,22 +124,35 @@ iterate_over_logs() {
 	wait_inactive_state
 }
 
+colorize_state() {
+	local color=
+	case "$1" in
+		AWAITING|POSTPONED) color=$BLUE ;;
+		DONE|EPERM|TESTED) color=$GREEN ;;
+		FAIL*) color=$RED ;;
+		*) color=$CYAN ;;
+	esac
+	echo "$color$1$NORM"
+}
+cstate=$(colorize_state "$state")
+
 wait_inactive_state() {
 	local oldstate=$state
 	state=$(curl -sSLf "$task_url/task/state" | cat -v)
+	cstate=$(colorize_state "$state")
 	case "$state" in
 		AWAITING|BUILDING|COMMITTING|FAILING|PENDING)
 			if [ "$state" != "$oldstate" ] && [ -n "$oldstate" ]; then
-				echo "- Task entered active state $state."
+				echo "- Task entered active state $cstate."
 			fi
 			return 0
 			;;
 		DONE|EPERM|FAILED|NEW|POSTPONED|SWEPT|TESTED)
-			echo "- Task entered inactive state $state."
+			echo "- Task entered inactive state $cstate."
 			return 1
 			;;
 		*)
-			echo "- Task entered unknown state $state."
+			echo "- Task entered unknown state $cstate."
 			return 0
 			;;
 	esac
@@ -148,13 +161,13 @@ wait_inactive_state() {
 if [ -n "$waitstate" ]; then
 	while true; do
 		wait_inactive_state
-		gum spin --title="Waiting while $state..." sleep "$sleepfor"
+		gum spin --title="Waiting while $cstate..." sleep "$sleepfor"
 		update_sleep_time
 	done
 else
 	while true; do
 		iterate_over_logs
-		gum spin --title="Waiting on $events_log while $state..." sleep "$sleepfor"
+		gum spin --title="Waiting on $events_log while $cstate..." sleep "$sleepfor"
 		update_sleep_time
 	done
 fi
