@@ -305,9 +305,13 @@ task_run() {
 		echo >&2 "${RED}$sub_count subtasks, something went wrong.${NORM}"
 		exit 1
 	fi
-	if [ $commit = --commit ] && [ $sub_count -ne 1 ]; then
-		echo >&2 "${RED}Too many subtasks [$sub_count] for commit (unsafe).${NORM}"
-		exit 1
+	if [ $commit = --commit ]; then
+		if [ $sub_count -ne 1 ]; then
+			echo >&2 "${RED}Too many subtasks [$sub_count] for commit (unsafe).${NORM}"
+			exit 1
+		else
+			echo >&2 "- No other subtasks, clear to commit."
+		fi
 	fi
 	[ -z "$norun" ] || return
 	V ssh -n "$girar" task run $dryrun $commit $failwhen $hurry "$task_id"
