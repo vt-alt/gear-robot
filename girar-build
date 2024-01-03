@@ -131,6 +131,13 @@ url=$(git remote get-url "$gitery")
 repo=$(basename "$url")
 dir_repo=${url##*:}
 
+# Determine actual version (with epoch) from first %changelog entry.
+cl=$(sed -n '/^%changelog/,/^$/s/^*/&/p' "$specfile")
+evr=${cl%[[:space:]]}
+evr=${evr##*[[:space:]]}
+ver=${evr#*:}
+[ "$ver" = "$tag" ] || fatal "Version from %changelog ($ver) does not match tag $tag"
+
 # Check existence of the package.
 unset lastbuild lastver lastgear lasttag
 if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
@@ -138,7 +145,7 @@ if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
 	if ! dts_list=$(curl -sSfL "$indexurl" 2>/dev/null); then
 		echo "Package $NAME not found in $branch."
 	else
-		if echo "$dts_list" | awk "\$4 == \"$tag\"" | grep .; then
+		if echo "$dts_list" | awk "\$4 == \"$evr\"" | grep .; then
 			# Just informational and superseded by the following check.
 			echo "The same version $tag is already committed to $branch"
 		fi
@@ -146,19 +153,19 @@ if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
 		lastver=$(echo "$lastbuild" | cut -f4)
 		lasttask=$(echo "$lastbuild" | cut -f2)
 		lastsubtask=$(echo "$lastbuild" | cut -f3)
-		cmp=$(rpmevrcmp "$tag" "$lastver")
+		cmp=$(rpmevrcmp "$evr" "$lastver")
 		if [ "$cmp" -eq -1 ]; then
 			clurl="https://git.altlinux.org/tasks/$lasttask/build/$lastsubtask/changelog"
-			warn "Newer version (task $lasttask.$lastsubtask) with $lastver > $tag already in $branch"
+			warn "Newer version (task $lasttask.$lastsubtask) with $lastver > $evr already in $branch"
 			echo "Changelog entry for it:"
 			echo "$BRIGHT$(curl -sSfL "$clurl")$NORM"
 			exit 1
 		elif [ "$cmp" -eq 0 ]; then
 			fatal "Same version $lastver already latest in $branch (task $lasttask.$lastsubtask)"
 		elif [ "$cmp" -eq 1 ]; then
-			echo "This version $tag is newer than last ($lastver) in $branch"
+			echo "This version $evr is newer than last ($lastver) in $branch"
 		else
-			fatal "Version comparison error $tag vs $lastver = $cmp"
+			fatal "Version comparison error $evr vs $lastver = $cmp"
 		fi
 		lastbuild=$(echo "$dts_list" | tail -1)
 		lastgear=$(echo "$lastbuild" | cut -f5)
