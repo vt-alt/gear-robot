@@ -142,7 +142,7 @@ cstate=$(colorize_state "$state")
 
 wait_inactive_state() {
 	local oldstate=$state
-	state=$(curl -sSLf "$task_url/task/state" | cat -v)
+	state=$(curl -sSLf "$task_url/task/state" | head -1)
 	cstate=$(colorize_state "$state")
 	case "$state" in
 		AWAITING|BUILDING|COMMITTING|FAILING|PENDING)
