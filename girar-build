@@ -13,6 +13,8 @@ export LANG=C LC_ALL=C
   NORM=$'\e[m'
 export RED GREEN BLUE NORM
 
+export GUM_CONFIRM_SELECTED_FOREGROUND=0
+
 V() {
         printf >&2 "${GREEN}+"
         printf >&2 ' %q' "$@"
@@ -260,6 +262,14 @@ wait_state() {
 				;;
 		esac
 		if [[ $count -eq 0 ]]; then
+			echo
+			echo "Task $task_id is in $ttype state $task_state, abort?"
+			V ssh -n "$girar" task show --brief "$task_id" | sed 's/^/| /'
+			echo
+			if gum confirm --timeout=60s --affirmative='Abort' --negative='Wait' --default=0 "Abort the task?"; then
+				V ssh -n "$girar" task "$task_id" abort
+				exit 1
+			fi
 			echo "Task $task_id is in $ttype state $task_state, waiting..."
 		fi
 		local elapsed
