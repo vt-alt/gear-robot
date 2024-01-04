@@ -26,6 +26,7 @@ taillogs=
 waitstate=
 state=
 select=
+declare -i task_try=0 task_iter=0
 
 while [ $# -gt 0 ]; do
 	opt=$1
@@ -53,10 +54,10 @@ if [ -n "$select" ]; then
 	taskls=$(ssh -n "${1-girar}" task ls | fzf)
 	taskls=${taskls%% *}
 	task_id=${taskls#"#"}
-	task_try=
 elif [ $# -gt 0 ]; then
 	task_id=$1
 	task_try=${2-}
+	task_iter=${3-}
 elif [ -s "$TASKLIST" ]; then
 	PPIDID=$PPID:$(date -r "/proc/$PPID" +%s)
 	task_id=$(awk "\$3 == \"$PPIDID\" {print\$1}" "$TASKLIST" | tail -1)
@@ -66,7 +67,6 @@ elif [ -s "$TASKLIST" ]; then
 		task_id=$(tail -1 "$TASKLIST" | cut -f1)
 		echo "- Last task in this repo $task_id"
 	fi
-	task_try=
 fi
 [ -z "${task_id-}" ] && fatal "Unknown task id"
 
@@ -87,7 +87,7 @@ logtmp=$(mktemp) && trap 'rm -- $logtmp' 0
 task_url="https://git.altlinux.org/tasks/$task_id"
 echo "- $BRIGHT$task_url/$NORM"
 events_log=
-declare -i log_lines=0 task_iter=1
+declare -i log_lines=0
 show_events_log() {
 	local log=$1
 	local url="$task_url/logs/$log"
@@ -106,24 +106,29 @@ show_events_log() {
 		-e "s/.*(TESTED|DONE).*/$GREEN&$NORM/" \
 		-e "/(cached)/s/\bOK\b/$_GREEN&$NORM/" \
 		-e "s/\b(OK|ALLOWED)\b/$GREEN&$NORM/" \
+		>&1
 
 	local -i lines=log_lines
 	log_lines=$(wc -l < "$logtmp")+1
 	[[ log_lines -eq lines ]] || update_sleep_time --reset
 }
+
 iterate_over_logs() {
-	local last_try=$(curl -sSLf "$task_url/task/try")
+	# Print all logs starting from task_try.task_iter upto max_try.max_iter
+	# max_iter is not really important and could be wrong (due to races).
+	local -i max_try=$(curl -sSLf "$task_url/task/try")
+	local -i max_iter=$(curl -sSLf "$task_url/task/iter")
 	# If user not specified 'try' argument, do not start from beginning.
-	if [ -z "$task_try" ]; then
-		task_try=$last_try
-		task_iter=$(curl -sSLf "$task_url/task/iter")
-	fi
-	for ((t=task_try;t<=last_try;t++)); do
-		for ((i=task_iter;;i++)); do
-			show_events_log "events.$t.$i.log" || break
+	[[ task_try -gt 0 ]] || task_try=max_try task_iter=max_iter
+	for ((;task_try<=max_try;task_try++)); do
+		[[ task_iter -gt 0 ]] || task_iter=1
+		for ((;;task_iter++)); do
+			show_events_log "events.$task_try.$task_iter.log" || break
+			[[ task_try -eq max_try ]] && [[ task_iter -ge max_iter ]] && break 2
 		done
+		[[ task_try -lt max_try ]] || break
+		task_iter=1
 	done
-	task_try=$last_try
 	wait_inactive_state
 }
 
