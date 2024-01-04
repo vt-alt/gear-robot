@@ -129,7 +129,11 @@ iterate_over_logs() {
 		[[ task_try -lt max_try ]] || break
 		task_iter=1
 	done
-	wait_inactive_state
+	wait_inactive_state || {
+		# Finish logs if there was inactive state (as in race).
+		show_events_log "events.$task_try.$task_iter.log"
+		return 1
+	}
 }
 
 colorize_state() {
@@ -143,36 +147,47 @@ colorize_state() {
 	esac
 	echo "$color$1$NORM"
 }
-cstate=$(colorize_state "$state")
 
 update_state() {
 	state=$(curl -sSLf "$task_url/task/state" | head -1)
 	cstate=$(colorize_state "$state")
 }
 
-[ -n "$state" ] || update_state
-first_state=$state
-
+state_verb='is in'
 wait_inactive_state() {
 	local oldstate=$state
 	update_state
+	[ "$state" = "$oldstate" ] || state_verb='entered'
+	local ts=$(date +%T)
+	# Always signal termination if there's final state.
 	case "$state" in
-		AWAITING|BUILDING|COMMITTING|FAILING|PENDING)
-			if [ "$state" != "$oldstate" ] && [ -n "$oldstate" ]; then
-				echo "- Task entered active state $cstate."
-			fi
-			return 0
-			;;
 		DONE|EPERM|FAILED|NEW|POSTPONED|SWEPT|TESTED)
-			echo "- Task entered inactive state $cstate."
+			echo "- [$ts] Task $state_verb inactive state $cstate."
+			update_sleep_time --reset
 			return 1
 			;;
+	esac
+	# Only update if transient state's changed.
+	[ "$state" != "$oldstate" ] || return 0
+	# Something interesting may be logged soon after state change.
+	update_sleep_time --reset
+	case "$state" in
+		AWAITING|BUILDING|COMMITTING|FAILING|PENDING)
+			echo "- [$ts] Task entered active state $cstate."
+			;;
 		*)
-			echo "- Task entered unknown state $cstate."
-			return 0
+			echo "- [$ts] Task entered unknown state $cstate."
 			;;
 	esac
+	return 0
 }
+
+if [ -n "$state" ]; then
+	cstate=$(colorize_state "$state")
+else
+	update_state
+fi
+first_state=$state
 
 if [ -n "$waitstate" ]; then
 	while true; do
