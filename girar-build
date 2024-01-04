@@ -122,9 +122,9 @@ if [ -z "${tag-}" ]; then
 		unset havetag
 		tag=( $(git tag --points-at @ "$VERSION-$RELEASE") )
 	fi
-	tag_id=$(git show-ref --tags "$tag" | cut -d' ' -f1)
-	[ -n "$tag_id" ] || fatal "tag_id empty."
 fi
+tag_id=$(git show-ref --tags "$tag" | cut -d' ' -f1)
+[ -n "$tag_id" ] || fatal "tag_id empty."
 
 # Remote repo name
 url=$(git remote get-url "$gitery")
@@ -132,7 +132,7 @@ repo=$(basename "$url")
 dir_repo=${url##*:}
 
 # Determine actual version (with epoch) from first %changelog entry.
-cl=$(sed -n '/^%changelog/,/^$/s/^*/&/p' "$specfile")
+cl=$(git show "$tag:$specfile" | sed -n '/^%changelog/,/^$/s/^*/&/p')
 if [ $(echo "$cl" | wc -l) -ne 1 ]; then
 	warn "Something wrong finding first %changelog entry."
 	echo "$cl" | head >&2
@@ -184,7 +184,7 @@ fi
 
 # Is this WiP build?
 if [ -n "${lasttag-}" ]; then
-	selector="$lasttag.."
+	selector="$lasttag..$tag"
 else
 	selector="--author=altlinux"
 fi
@@ -204,7 +204,7 @@ if [[ "$RELEASE" =~ test\|wip ]]; then
 	echo "Seems to be work-in-progress release, disapproving"
 	disapprove=WIP
 fi
-if sed -n '/^%changelog/,/^$/s/^-/&/p' "$specfile" | grep --color=auto -iP '\b(wip|test)\b'; then
+if git show "$tag:$specfile" | sed -n '/^%changelog/,/^$/s/^-/&/p' | grep --color=auto -iP '\b(wip|test)\b'; then
 	echo "Seems to be work-in-progress changelog, disapproving"
 	disapprove=WIP
 fi
