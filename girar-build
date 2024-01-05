@@ -355,8 +355,9 @@ task_run() {
 	fi
 	if [ $commit = --commit ]; then
 		if [ $sub_count -ne 1 ]; then
-			echo >&2 "${RED}Too many subtasks [$sub_count] for commit (unsafe).${NORM}"
-			exit 1
+			echo >&2 "${RED}Multiple subtasks [$sub_count] to commit (potentially unsafe):${NORM}"
+			ssh -n "$girar" task show --brief "$task_id"
+			gum confirm --default=0 "Confirm commit of task $task_id with $sub_count subtasks."
 		else
 			echo >&2 "- No other subtasks, clear to commit."
 		fi
