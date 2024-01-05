@@ -189,16 +189,21 @@ else
 fi
 first_state=$state
 
+committing=
+if curl -sSLf "$task_url/info.json" | grep -qE '^\s*"test_only":\s+false,'; then
+	committing=" (commit)"
+fi
+
 if [ -n "$waitstate" ]; then
 	while true; do
 		wait_inactive_state || break
-		gum spin --title="Waiting while $cstate..." sleep "$sleepfor"
+		gum spin --title="Waiting while $cstate$committing..." sleep "$sleepfor"
 		update_sleep_time
 	done
 else
 	while true; do
 		iterate_over_logs || break
-		gum spin --title="Waiting on $events_log while $cstate..." sleep "$sleepfor"
+		gum spin --title="Waiting on $events_log while $cstate$committing..." sleep "$sleepfor"
 		update_sleep_time
 	done
 fi
