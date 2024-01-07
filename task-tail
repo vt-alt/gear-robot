@@ -27,6 +27,7 @@ waitstate=
 state=
 select=
 declare -i task_try=0 task_iter=0
+unset tailing
 
 while [ $# -gt 0 ]; do
 	opt=$1
@@ -34,6 +35,7 @@ while [ $# -gt 0 ]; do
 		--tail) export taillogs=y ;;
 		--wait) waitstate=y ;;
 		--state=*) state=${opt#*=} ;;
+		-f | --follow) tailing=-n10 ;;
 		-i) select=y ;;
 		-*) fatal "Unknown option: $opt" ;;
 		*) break ;;
@@ -99,7 +101,12 @@ show_events_log() {
 		events_log=$log
 		log_lines=1
 	fi
-	tail -n+"$log_lines" "$logtmp" \
+	local lineopt="-n+$log_lines"
+	if [ -v tailing ]; then
+		lineopt=$tailing
+		unset tailing
+	fi
+	tail "$lineopt" "$logtmp" \
 		| sed -E \
 		-e "s/(^\[\w+\])(.*)/$NORM\1$MAGENTA\2$NORM/" \
 		-e "s/.*(ERROR|FAIL|FATAL).*/$RED&$NORM/" \
