@@ -190,7 +190,7 @@ fi
 first_state=$state
 
 committing=
-if curl -sSLf "$task_url/info.json" | grep -qE '^\s*"test_only":\s+false,'; then
+if curl -sLf "$task_url/info.json" | grep -qE '^\s*"test_only":\s+false,'; then
 	committing=" (commit)"
 fi
 
