@@ -239,8 +239,6 @@ update_from_git_origin() {
 			tagstate=unsigned
 		fi
 
-		V git diff --check @ "$tag" || gum confirm "git diff --check HEAD $tag returned errors."
-
 		# Actual merges.
 		# shellcheck disable=SC2086
 		if [ -v readtreemerge ]; then
