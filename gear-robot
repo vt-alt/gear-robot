@@ -276,11 +276,17 @@ update_from_git_origin() {
 		fi
 
 		# Diff to the merged tag excluding .gear and spec.
-		if ! V git diff --exit-code --stat @ "$tag" -- ":!.gear" ":!$specfile"; then
+		excludes=()
+		for f in .gear .geer-rules vendor altlinux; do
+			[ -e "$f" ] && excludes+=( ":!$f" )
+		done
+		[ -n "${specfile##.gear/*}" ] && excludes+=( ":!$specfile" )
+		if ! V git diff --exit-code --stat @ "$tag" -- "${excludes[@]}"; then
 			gum confirm "There is difference between HEAD and $tag" --affirmative='Accept' --negative='Stop' --default=0
 		else
 			info "No difference between HEAD and $tag, good."
 		fi
+		unset excludes
 	else
 		tagstate=unknown
 	fi
