@@ -186,7 +186,7 @@ fi
 if [ -n "${lasttag-}" ]; then
 	selector="$lasttag..$tag"
 else
-	selector="--author=altlinux"
+	selector="--author=altlinux @"
 fi
 # shellcheck disable=SC2086
 if git log --format='%m %h %ad %s' --date=short --first-parent $selector \
