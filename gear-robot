@@ -42,19 +42,21 @@ while [ $# -gt 0 ]; do
 	opt=$1
 	case "$opt" in
 		-f | --force) force=-f ;;
-		--build) build=y ;;
-		--push)  build=y; push=y ;;
-		--commit | --test-only) build=y; push=y; commit=$opt ;;
+		--build=*) build+=:${opt#*=} ;;
+		--hsh | --hasher) build+=:hsh ;;
+		--girar) build+=:girar ;;
+		--push) push=y ;;
+		--commit | --test-only) commit=$opt ;;
 		--theirs ) theirs='-X theirs' ;;
 		--no-gears ) unset gears_update ;;
-		--all) build=y push=y commit=--commit ;;
+		--all) build=:hsh:girar ;;
 		--keyserver=ubuntu) keyserver="--keyserver hkps://keyserver.ubuntu.com" ;;
 		--keyserver) shift; keyserver="--keyserver $1" ;;
 		--update-key) updatekey=y ;;
 		--key=*) keyurl=${opt#*=} ;;
 		--nosig* | --no-sig*) nosignature=y ;;
 		--read-tree) readtreemerge=y ;;
-		--disa*) disapprove=y ;;
+		--disa*) disapprove=$opt ;;
 		--rc) allow_rc=y ;;
 		--no-vendor) no_vendor=y ;;
 		--no-fetch) no_fetch=y ;;
@@ -456,7 +458,9 @@ sed -i -E "s/^Release:.*/Release: alt1/" "$specfile"
 safe-add-changelog -e "$append_changelog" "$specfile"
 
 # Build nefore tagging.
-[ -n "$build" ] && V gear-hsh --commit 2>&1 | tee build.log
+if [[ "$build" =~ :local|:hsh|:hasher ]]; then
+	V gear-hsh --commit 2>&1 | tee build.log
+fi
 
 # Tag.
 git diff
@@ -467,16 +471,8 @@ unset GNUPGHOME
 setsid gear-create-tag $force
 
 # Externalize changes.
-[ -n "$push" ]  && V git push gitery "$futag" $force
-if [ -n "$commit" ]; then
-	# shellcheck disable=SC2086
-	task=$(V ssh -n girar task new ${branch-})
-	echo "$task" > .gear/task
-	V ssh -n girar task add "$task" repo "$NAME" "$futag"
-	if [ -v disapprove ]; then
-		subtask=$(ssh -n girar task show --brief "$task" | grep -e ":$NAME\.git=" | grep -Po '^\s\K\d+')
-		echo TEST | V ssh girar task disapprove "$task" "$subtask"
-	fi
-	V ssh -n girar task run "$commit" "$task"
-fi
+[ -n "$push" ] && V git push gitery "$futag" $force
 
+if [[ "$build" =~ :girar ]]; then
+	girar-build $commit ${disapprove-}
+fi
