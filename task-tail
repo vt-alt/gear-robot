@@ -216,4 +216,5 @@ else
 fi
 if [ "$state" != "$first_state" ]; then
 	toilet "${state,,}" | lolcat
+	echo -ne '\a'
 fi
