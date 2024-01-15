@@ -246,7 +246,7 @@ V git push "$gitery" "$tag" $force
 
 # Determine target task number
 if [ -n "$task_id" ]; then
-	tasks_ls=$(ssh -n "$girar" task ls --brief)
+	tasks_ls=$(ssh -n "$girar" task ls --brief 2>/dev/null)
 	task_matched=$(echo "$tasks_ls" | grep "^#$task_id " || :)
 	[ -n "$task_matched" ] || fatal "${RED}Requested task does not exist${NORM}"
 	echo >&2 "- Using existing task $task_id"
@@ -254,7 +254,7 @@ elif [ -n "$newtask" ]; then
 	unset task_matched
 else
 	# Use heuristic to search for appropriate task.
-	tasks_ls=$(ssh -n "$girar" task ls)
+	tasks_ls=$(ssh -n "$girar" task ls 2>/dev/null)
 	if [ -s ~/.task-skip ]; then
 		tasks_ls=$(echo "$tasks_ls" | grep -v -w -f ~/.task-skip)
 	fi
