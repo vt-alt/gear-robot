@@ -143,7 +143,11 @@ fi
 evr=${cl%[[:space:]]}
 evr=${evr##*[[:space:]]}
 ver=${evr#*:}
-[ "$ver" = "$tag" ] || fatal "Version from %changelog ($ver) does not match tag $tag"
+if [[ $NAME =~ ^kernel- ]]; then
+	[ "$NAME-$ver" = "$tag" ] || fatal "$NAME version from %changelog ($ver) does not match tag $tag"
+else
+	[ "$ver" = "$tag" ] || fatal "Version from %changelog ($ver) does not match tag $tag"
+fi
 
 # Check existence of the package.
 unset lastbuild lastver lastgear lasttag
