@@ -46,6 +46,7 @@ girar=
 gitery=
 branch=sisyphus
 disapprove=
+no_disapprove=
 task_id=
 skip_repo_check=
 skip_version_check=
@@ -69,6 +70,7 @@ while [ $# -gt 0 ]; do
 		--e2k ) e2k=y ;;
 		--repo=*) branch=${opt#*=} ;;
 		--dis* | --test ) disapprove=TEST ;;
+		--no-disa*) no_disapprove=y ;;
 		--tag=*) tag=${opt#*=} ;;
 		--skip-repo-check) skip_repo_check=y ;;
 		--skip-version-check) skip_version_check=y ;;
@@ -245,6 +247,11 @@ done || {
 	warn "Megacommit check failed but user agreed to continue with --disapprove."
 	disapprove=Megacommit
 }
+
+if [ -n "$disapprove" ] && [ -n "$no_disapprove" ]; then
+	warn "Disapproval of '$disapprove' will be skipped by user request."
+	disapprove=
+fi
 
 V git push "$gitery" "$tag" $force
 
