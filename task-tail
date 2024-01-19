@@ -43,14 +43,6 @@ while [ $# -gt 0 ]; do
 	shift
 done
 
-toplevel=$(git rev-parse --show-toplevel 2>/dev/null ||:)
-if [ -z "$toplevel" ]; then
-	cd -P ~/.girar-build-repo
-	echo "- cd $PWD"
-	toplevel=$PWD
-fi
-cd "$toplevel"
-
 TASKLIST=.git/.girar-build
 if [ -n "$select" ]; then
 	taskls=$(ssh -n "${1-girar}" task ls | fzf)
@@ -60,14 +52,24 @@ elif [ $# -gt 0 ]; then
 	task_id=$1
 	task_try=${2-}
 	task_iter=${3-}
-elif [ -s "$TASKLIST" ]; then
-	PPIDID=$PPID:$(date -r "/proc/$PPID" +%s)
-	task_id=$(awk "\$3 == \"$PPIDID\" {print\$1}" "$TASKLIST" | tail -1)
-	if [ -n "$task_id" ]; then
-		echo "- Last task in this shell $task_id"
-	else
-		task_id=$(tail -1 "$TASKLIST" | cut -f1)
-		echo "- Last task in this repo $task_id"
+else
+	toplevel=$(git rev-parse --show-toplevel 2>/dev/null ||:)
+	if [ -z "$toplevel" ]; then
+		cd -P ~/.girar-build-repo
+		echo "- cd $PWD"
+		toplevel=$PWD
+	fi
+	cd "$toplevel"
+
+	if [ -s "$TASKLIST" ]; then
+		PPIDID=$PPID:$(date -r "/proc/$PPID" +%s)
+		task_id=$(awk "\$3 == \"$PPIDID\" {print\$1}" "$TASKLIST" | tail -1)
+		if [ -n "$task_id" ]; then
+			echo "- Last task in this shell $task_id"
+		else
+			task_id=$(tail -1 "$TASKLIST" | cut -f1)
+			echo "- Last task in this repo $task_id"
+		fi
 	fi
 fi
 [ -z "${task_id-}" ] && fatal "Unknown task id"
