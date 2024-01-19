@@ -169,7 +169,7 @@ wait_inactive_state() {
 	# Always signal termination if there's final state.
 	case "$state" in
 		DONE|EPERM|FAILED|NEW|POSTPONED|SWEPT|TESTED)
-			echo "- [$ts] Task $state_verb inactive state $cstate."
+			echo "- [$ts] Task $task_id $state_verb inactive state $cstate."
 			update_sleep_time --reset
 			return 1
 			;;
@@ -180,10 +180,10 @@ wait_inactive_state() {
 	update_sleep_time --reset
 	case "$state" in
 		AWAITING|BUILDING|COMMITTING|FAILING|PENDING)
-			echo "- [$ts] Task entered active state $cstate."
+			echo "- [$ts] Task $task_id entered active state $cstate."
 			;;
 		*)
-			echo "- [$ts] Task entered unknown state $cstate."
+			echo "- [$ts] Task $task_id entered unknown state $cstate."
 			;;
 	esac
 	return 0
