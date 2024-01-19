@@ -23,7 +23,7 @@ V() {
         printf >&2 "${GREEN}+"
         printf >&2 ' %q' "$@"
         printf >&2 "${NORM}\n"
-        "$@"
+	"$@" 2> >(sed $'s/.*/\e[33m&\e[m/' >&2)
 }
 
 warn() {
