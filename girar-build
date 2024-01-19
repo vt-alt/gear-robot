@@ -51,8 +51,10 @@ task_id=
 skip_repo_check=
 skip_version_check=
 taillogs=--tail
+message=
 while [ $# -gt 0 ]; do
 	opt=$1
+	arg=${opt#*=}
 	case "$opt" in
 		-f | --force) force=-f ;;
 		--tail) taillogs=--tail ;;
@@ -74,6 +76,7 @@ while [ $# -gt 0 ]; do
 		--tag=*) tag=${opt#*=} ;;
 		--skip-repo-check) skip_repo_check=y ;;
 		--skip-version-check) skip_version_check=y ;;
+		--message=*) message="-m ${arg//[[:space:]]/_}" ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -381,7 +384,7 @@ task_run() {
 		fi
 	fi
 	[ -z "$norun" ] || return
-	V ssh -n "$girar" task run $dryrun $commit $failwhen $hurry "$task_id"
+	V ssh -n "$girar" task run $dryrun $commit $failwhen $hurry $message "$task_id"
 
 	if [ -n "$taillogs" ]; then
 		task_try+=1
