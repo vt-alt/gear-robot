@@ -103,11 +103,16 @@ else
 	fi
 	indexbase="http://ftp.altlinux.org/pub/distributions/archive/$branch/index/src"
 fi
+
+topname=$(basename "$toplevel")
+if ! curl -fs --head "http://git.altlinux.org/people/$USER/packages/$topname.git" >/dev/null; then
+	V ssh -n "$gitery" init-db "$topname"
+fi
 if ! git config "remote.$gitery.url" >& /dev/null; then
 	topname=$(basename "$toplevel")
-	V ssh -n "$gitery" init-db "$topname"
 	V git remote add "$gitery" "$gitery:packages/${topname}.git"
 fi
+unset topname
 
 gear_describe() {
         # shellcheck disable=SC2046
