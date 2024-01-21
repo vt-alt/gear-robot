@@ -1,58 +1,126 @@
-#!/bin/bash -efu
+#!/bin/bash
 
-set -x
+set -u
 mkdir -p .gear
+cr=$'\n'
 name=$(basename $PWD)
 spec=.gear/$(basename $PWD).spec
-head=origin/master
-head=@
-hdesc=$(git describe --tags $head)
-hdate=$(git tag -l --format='%(taggerdate:short)' $head)
-[ -n "$hdate" ] || hdate=$(git log -1 --format=%cd --date=short $head)
+HEAD=@
+hdesc=$(git describe --tags $HEAD)
+hdate=$(git tag -l --format='%(taggerdate:short)' $HEAD)
+[ -n "$hdate" ] || hdate=$(git log -1 --format=%cd --date=short $HEAD)
 ver=${hdesc%%-*}
 ver=${ver#v}
 cdate=$(LANG=C date +'%a %b %d %Y')
+packager=$(rpm --eval %packager)
+summary=...
+license=...
+
+url=$(git remote get-url origin)
+if [[ $url =~ ^https://github\.com/ ]]; then
+	ghrepo=${url#*/github.com/}
+	ghjson=$(curl -fs "https://api.github.com/repos/$ghrepo")
+	homepage=$(jq -r .homepage <<<"$ghjson")
+	if [ $homepage != null ]; then
+		url="$homepage${cr}Vcs: $url"
+	fi
+	summary=$(jq -r .description <<<"$ghjson")
+	license=$(jq -r .license.name <<<"$ghjson")
+fi
+verifyelf="strict"
+[ -e go.mod -o -e Cargo.toml ] && verifyelf+=",lint=relaxed"
+[ -e Cargo.toml ] && verifyelf+=",lfs=relaxed"
 
 cat <<EOF >.gear/rules
 tar: .
 spec: $spec
 EOF
-cat <<EOF > $spec
-# SPDX-License-Identifier: GPL-2.0-only
-%define _unpackaged_files_terminate_build 1
-%define _stripped_files_terminate_build 1
-%set_verify_elf_method strict
 
-Name: $name
-Version: $ver
-Release: alt1
-Summary: ...
-License: ...
-Group: ...
-Url: ...
+{
+cat <<-EOF
+	# SPDX-License-Identifier: GPL-2.0-only
+	%define _unpackaged_files_terminate_build 1
+	%define _stripped_files_terminate_build 1
+	%set_verify_elf_method $verifyelf
 
-Source: %name-%version.tar
+	Name: $name
+	Version: $ver
+	Release: alt1
+	Summary: $summary
+	License: $license
+	Group: ...
+	Url: $url
 
-%description
-%summary.
-
-%prep
-%setup
-
-%build
-%make_build
-
-%install
-%makeinstall_std
-
-%check
-
-%files
-%_bindir/$name
-
-%changelog
-* $cdate Vitaly Chikunov <vt@altlinux.org> $ver-alt1
-- First import $hdesc ($hdate).
+	Source: %name-%version.tar
 EOF
+[ -e Cargo.toml ] && echo "BuildRequires: /proc"
+[ -e Cargo.toml ] && echo "BuildRequires: rust-cargo"
+[ -e go.mod ] && echo "BuildRequires: golang"
+echo
+
+cat <<-EOF
+	%description
+	%summary.
+
+	%prep
+	%setup
+EOF
+if [ -e Cargo.toml ]; then
+	cat <<-"EOFF"
+	mkdir -p .cargo
+	cat >> .cargo/config <<EOF
+	[source.crates-io]
+	replace-with = "vendored-sources"
+
+	[source.vendored-sources]
+	directory = "vendor"
+
+	[term]
+	verbose = true
+	quiet = false
+
+	[install]
+	root = "%buildroot%_prefix"
+
+	[build]
+	rustflags = ["-Copt-level=3", "-Cdebuginfo=1"]
+
+	[profile.release]
+	strip = false
+	EOF
+	EOFF
+fi
+echo
+
+echo "%build"
+[ -e configure -o -e configure.in -o -e configure.ac ] && echo "%autoreconf"
+[ -e configure -o -e Makefile -o Makefile.in -o Makefile.am ] && echo "%make_build"
+[ -e Cargo.toml ] && echo "cargo build %_smp_mflags --offline --release --all-features"
+[ -e go.mod ] && echo "go build -v -buildmode=pie ."
+echo
+
+echo "%install"
+[ -e configure -o -e Makefile -o Makefile.in -o Makefile.am ] && echo "%makeinstall_std"
+[ -e Cargo.toml ] && echo "install -Dp target/release/%name -t %buildroot%_bindir"
+[ -e go.mod ] && echo "install -Dp %name %buildroot%_bindir/%name"
+echo
+
+echo "%check"
+echo "%buildroot%_bindir/%name --version"
+[ -e go.mod ] && echo "go test -v ./..."
+grep -qs Makefile* '^check:' && echo "%make_build check"
+grep -qs Makefile* '^test:' && echo "%make_build test"
+echo
+
+cat <<-EOF
+	%files
+	%_bindir/$name
+
+	%changelog
+	* $cdate $packager $ver-alt1
+	- First import $hdesc ($hdate).
+EOF
+} > $spec
+
 git add -f .gear/rules $spec
-gear-commit "$@"
+gear-commit "$@" --no-edit
