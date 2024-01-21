@@ -48,14 +48,25 @@ cat <<-EOF
 	Release: alt1
 	Summary: $summary
 	License: $license
-	Group: ...
+	Group: Other
 	Url: $url
 
 	Source: %name-%version.tar
 EOF
+[ -e pyproject.toml -o -e setup.py ] && echo "BuildArch: noarch"
+[ -e pyproject.toml -o -e setup.py ] && echo "BuildRequires(pre): rpm-build-python3"
 [ -e Cargo.toml ] && echo "BuildRequires: /proc"
 [ -e Cargo.toml ] && echo "BuildRequires: rust-cargo"
 [ -e go.mod ] && echo "BuildRequires: golang"
+[ -e pyproject.toml -o -e setup.py ] && echo "BuildRequires: python3-devel"
+[ -e pyproject.toml ] && echo "BuildRequires: python3-module-setuptools_scm" ||
+[ -e setup.py ] && echo "BuildRequires: python3-module-setuptools"
+[ -e pyproject.toml ] && echo "BuildRequires: python3-module-wheel"
+if grep -qs pytest pyproject.toml; then
+	echo "%{?!_without_check:%{?!_disable_check:"
+	echo "BuildRequires: pytest3"
+	echo "}}"
+fi
 echo
 
 cat <<-EOF
@@ -90,6 +101,10 @@ if [ -e Cargo.toml ]; then
 	EOF
 	EOFF
 fi
+if [ -s .gitmodules ]; then
+	echo "# Have .gitmodules with content:"
+	sed 's/^/# /' < .gitmodules
+fi
 echo
 
 echo "%build"
@@ -97,25 +112,37 @@ echo "%build"
 [ -e configure -o -e Makefile -o Makefile.in -o Makefile.am ] && echo "%make_build"
 [ -e Cargo.toml ] && echo "cargo build %_smp_mflags --offline --release --all-features"
 [ -e go.mod ] && echo "go build -v -buildmode=pie ."
+[ -e pyproject.toml ] && echo "export SETUPTOOLS_SCM_PRETEND_VERSION=%version${cr}%pyproject_build" ||
+[ -e setup.py ] && echo "%python3_build_debug"
 echo
 
 echo "%install"
 [ -e configure -o -e Makefile -o Makefile.in -o Makefile.am ] && echo "%makeinstall_std"
 [ -e Cargo.toml ] && echo "install -Dp target/release/%name -t %buildroot%_bindir"
 [ -e go.mod ] && echo "install -Dp %name %buildroot%_bindir/%name"
+[ -e pyproject.toml ] && echo "export SETUPTOOLS_SCM_PRETEND_VERSION=%version${cr}%pyproject_install" ||
+[ -e setup.py ] && echo "%python3_install"
 echo
 
 echo "%check"
-echo "%buildroot%_bindir/%name --version"
+[ -e pyproject.toml -o -e setup.py ] && echo "export PYTHONPATH=%buildroot%python3_sitelibdir"
+echo "%buildroot%_bindir/$name --version |& grep -Pw '\Q%version\E'"
 [ -e go.mod ] && echo "go test -v ./..."
 grep -qs Makefile* '^check:' && echo "%make_build check"
+grep -qs Makefile* '^tests:' && echo "%make_build tests"
 grep -qs Makefile* '^test:' && echo "%make_build test"
+grep -qs pytest pyproject.toml && echo "%pyproject_run_pytest"
+echo
+
+echo "%files"
+doc=$(shopt -s nullglob; ls --file-type -d COPY* CREDITS* README* CHANGE* NEWS* AUTHOR* LICEN?E* ChangeLog* *.md *.rst *.txt | sort -u | xargs)
+[ -n "$doc" ] && echo "%define _customdocdir %_docdir/%name"
+[ -n "$doc" ] && echo "%doc $doc"
+echo "%_bindir/$name"
+[ -e pyproject.toml -o -e setup.py ] && echo "%python3_sitelibdir/%{name}*"
 echo
 
 cat <<-EOF
-	%files
-	%_bindir/$name
-
 	%changelog
 	* $cdate $packager $ver-alt1
 	- First import $hdesc ($hdate).
