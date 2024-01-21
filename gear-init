@@ -127,7 +127,7 @@ echo "%build"
 [ -e configure -o -e configure.in -o -e configure.ac ] && echo "%autoreconf"
 [ -e configure -o -e Makefile -o Makefile.in -o Makefile.am ] && echo "%make_build"
 [ -e Cargo.toml ] && echo "cargo build %_smp_mflags --offline --release --all-features"
-[ -e go.mod ] && echo "go build -v -buildmode=pie ."
+[ -e go.mod ] && echo "go build -v -buildmode=pie -ldflags \"-X main.version=%version\" ."
 [ -e pyproject.toml ] && echo "export SETUPTOOLS_SCM_PRETEND_VERSION=%version${cr}%pyproject_build" ||
 [ -e setup.py ] && echo "%python3_build_debug"
 echo
