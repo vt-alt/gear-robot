@@ -47,9 +47,18 @@ EOF
 cat <<-EOF
 	# SPDX-License-Identifier: GPL-2.0-only
 	%define _unpackaged_files_terminate_build 1
-	%define _stripped_files_terminate_build 1
-	%set_verify_elf_method $verifyelf
+EOF
 
+src=$(find -iregex '.*\.\(c\|cc\|cpp\|cxx\|go\|rs\|s\)' -print -quit)
+if [ -n "$src" ]; then
+	echo "%define _stripped_files_terminate_build 1"
+	echo "%set_verify_elf_method $verifyelf"
+else
+	echo "- No object sources found, ELF checks are skipped." >&2
+fi
+echo
+
+cat <<-EOF
 	Name: $name
 	Version: $ver
 	Release: alt1
