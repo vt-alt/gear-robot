@@ -1,6 +1,12 @@
-#!/bin/bash
+#!/bin/bash -u
 
-set -u
+V() {
+        printf >&2 '\e[1;32m+'
+        printf >&2 ' %q' "$@"
+        printf >&2 '\e[m\n'
+        "$@"
+}
+
 mkdir -p .gear
 cr=$'\n'
 name=$(basename $PWD)
@@ -19,6 +25,7 @@ license=...
 url=$(git remote get-url origin)
 if [[ $url =~ ^https://github\.com/ ]]; then
 	ghrepo=${url#*/github.com/}
+	echo "- GitHub project ($ghrepo), extracting infos." >&2
 	ghjson=$(curl -fs "https://api.github.com/repos/$ghrepo")
 	homepage=$(jq -r .homepage <<<"$ghjson")
 	if [ $homepage != null ]; then
@@ -149,5 +156,26 @@ cat <<-EOF
 EOF
 } > $spec
 
-git add -f .gear/rules $spec
-gear-commit "$@" --no-edit
+if [ -e vendor ]; then
+	echo "! Vendoring dir already present." >&2
+else
+	if [ -e Cargo.toml ]; then
+		V cargo vendor --quiet
+		V find vendor/ \( -name '*.a' -o -name '*.lib' -o -name '*.dll' -o -name '*.obj' \) -delete
+		sed -Ei 's!,"[^"]+\.(a|lib|dll|obj)":"[^"]+"!!g' $(find vendor -name .cargo-checksum.json)
+		V git add -f Cargo.lock
+		cmd="cargo vendor (with cleanup)"
+	fi
+	if [ -e go.mod ]; then
+		V go mod vendor
+		cmd="go mod vendor"
+	fi
+	if [ -n "$cmd" ] && [ -d vendor ]; then
+		grep -sq -w 'text' .gitattributes && echo '* -text' > vendor/.gitattributes
+		V git add -f -A vendor
+		V git commit -q -m "ALT: $cmd"
+	fi
+fi
+
+V git add -f .gear/rules $spec
+V gear-commit --no-edit "$@"
