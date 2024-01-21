@@ -127,7 +127,17 @@ echo "%build"
 [ -e configure -o -e configure.in -o -e configure.ac ] && echo "%autoreconf"
 [ -e configure -o -e Makefile -o Makefile.in -o Makefile.am ] && echo "%make_build"
 [ -e Cargo.toml ] && echo "cargo build %_smp_mflags --offline --release --all-features"
-[ -e go.mod ] && echo "go build -v -buildmode=pie -ldflags \"-X main.version=%version\" ."
+if [ -e go.mod ]; then
+	main=$(git grep -l '^func main' -- ':!vendor')
+	for i in $main; do
+		version=
+		ldflags=
+		grep -qs -w Version "$i" && version=Version
+		grep -qs -w version "$i" && version=version
+		[ -n "$version" ] && ldflags=" -ldflags \"-X main.$version=%version\""
+		echo "go build -v -buildmode=pie$ldflags $i"
+	done
+fi
 [ -e pyproject.toml ] && echo "export SETUPTOOLS_SCM_PRETEND_VERSION=%version${cr}%pyproject_build" ||
 [ -e setup.py ] && echo "%python3_build_debug"
 echo
@@ -135,7 +145,12 @@ echo
 echo "%install"
 [ -e configure -o -e Makefile -o Makefile.in -o Makefile.am ] && echo "%makeinstall_std"
 [ -e Cargo.toml ] && echo "install -Dp target/release/%name -t %buildroot%_bindir"
-[ -e go.mod ] && echo "install -Dp %name %buildroot%_bindir/%name"
+if [ -e go.mod ]; then
+	for i in $main; do
+		n=$(basename "$i" .go)
+		echo "install -Dp $n %buildroot%_bindir/$n"
+	done
+fi
 [ -e pyproject.toml ] && echo "export SETUPTOOLS_SCM_PRETEND_VERSION=%version${cr}%pyproject_install" ||
 [ -e setup.py ] && echo "%python3_install"
 echo
