@@ -1,0 +1,58 @@
+#!/bin/bash -efu
+
+set -x
+mkdir -p .gear
+name=$(basename $PWD)
+spec=.gear/$(basename $PWD).spec
+head=origin/master
+head=@
+hdesc=$(git describe --tags $head)
+hdate=$(git tag -l --format='%(taggerdate:short)' $head)
+[ -n "$hdate" ] || hdate=$(git log -1 --format=%cd --date=short $head)
+ver=${hdesc%%-*}
+ver=${ver#v}
+cdate=$(LANG=C date +'%a %b %d %Y')
+
+cat <<EOF >.gear/rules
+tar: .
+spec: $spec
+EOF
+cat <<EOF > $spec
+# SPDX-License-Identifier: GPL-2.0-only
+%define _unpackaged_files_terminate_build 1
+%define _stripped_files_terminate_build 1
+%set_verify_elf_method strict
+
+Name: $name
+Version: $ver
+Release: alt1
+Summary: ...
+License: ...
+Group: ...
+Url: ...
+
+Source: %name-%version.tar
+
+%description
+%summary.
+
+%prep
+%setup
+
+%build
+%make_build
+
+%install
+%makeinstall_std
+
+%check
+
+%files
+%_bindir/$name
+
+%changelog
+* $cdate Vitaly Chikunov <vt@altlinux.org> $ver-alt1
+- First import $hdesc ($hdate).
+EOF
+git add -f .gear/rules $spec
+gear-commit "$@"
