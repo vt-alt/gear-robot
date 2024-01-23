@@ -26,9 +26,9 @@ url=$(git remote get-url origin)
 if [[ $url =~ ^https://github\.com/ ]]; then
 	ghrepo=${url#*/github.com/}
 	echo "- GitHub project ($ghrepo), extracting infos." >&2
-	ghjson=$(curl -fs "https://api.github.com/repos/$ghrepo")
-	homepage=$(jq -r .homepage <<<"$ghjson")
-	if [ $homepage != null ]; then
+	ghjson=$(set -x; curl -fs "https://api.github.com/repos/$ghrepo")
+	homepage=$(jq -er .homepage <<<"$ghjson" || :)
+	if [ -n "$homepage" ]; then
 		url="$homepage${cr}Vcs: $url"
 	fi
 	summary=$(jq -r .description <<<"$ghjson")
