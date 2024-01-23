@@ -125,7 +125,7 @@ echo
 
 echo "%build"
 [ -e configure -o -e configure.in -o -e configure.ac ] && echo "%autoreconf"
-[ -e configure -o -e Makefile -o Makefile.in -o Makefile.am ] && echo "%make_build"
+[ -e configure -o -e Makefile -o -e Makefile.in -o -e Makefile.am ] && echo "%make_build"
 [ -e Cargo.toml ] && echo "cargo build %_smp_mflags --offline --release --all-features"
 if [ -e go.mod ]; then
 	main=$(git grep -l '^func main' -- ':!vendor')
@@ -143,7 +143,7 @@ fi
 echo
 
 echo "%install"
-[ -e configure -o -e Makefile -o Makefile.in -o Makefile.am ] && echo "%makeinstall_std"
+[ -e configure -o -e Makefile -o -e Makefile.in -o -e Makefile.am ] && echo "%makeinstall_std"
 [ -e Cargo.toml ] && echo "install -Dp target/release/%name -t %buildroot%_bindir"
 if [ -e go.mod ]; then
 	for i in $main; do
