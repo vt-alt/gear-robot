@@ -283,7 +283,7 @@ update_from_git_origin() {
 			[ -e "$f" ] && excludes+=( ":!$f" )
 		done
 		[ -n "${specfile##.gear/*}" ] && excludes+=( ":!$specfile" )
-		if ! V git diff --exit-code --stat @ "$tag" -- "${excludes[@]}"; then
+		if ! V git diff --exit-code --stat "$tag" @ -- "${excludes[@]}"; then
 			gum confirm "There is difference between HEAD and $tag" --affirmative='Accept' --negative='Stop' --default=0
 		else
 			info "No difference between HEAD and $tag, good."
