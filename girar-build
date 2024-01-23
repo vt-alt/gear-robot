@@ -122,6 +122,8 @@ gear_describe() {
 gear_describe
 
 if [ -z "${tag-}" ]; then
+	git diff --quiet || fatal "Uncommitted and unstaged changes."
+	git diff --quiet --cached || fatal "Uncommitted but staged changes."
 	tag=( $(git tag --points-at @ '*-alt*') )
 	if [ ${#tag[@]} -gt 1 ]; then
 		fatal "Too many -alt tags: ${tag[*]}."
