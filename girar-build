@@ -52,6 +52,7 @@ skip_repo_check=
 skip_version_check=
 taillogs=--tail
 message=
+kernelbot=
 while [ $# -gt 0 ]; do
 	opt=$1
 	arg=${opt#*=}
@@ -70,6 +71,7 @@ while [ $# -gt 0 ]; do
 		--unhurry) hurry=--unhurry ;;
 		--task=*) task_id=${opt#*=} ;;
 		--e2k ) e2k=y ;;
+		--kernelbot | --kb) kernelbot=y ;;
 		--repo=*) branch=${opt#*=} ;;
 		--dis* | --test ) disapprove=TEST ;;
 		--no-disa*) no_disapprove=y ;;
@@ -91,10 +93,12 @@ export specfile
 toplevel=$(git rev-parse --show-toplevel)
 cd "$toplevel"
 
+people=
 # Determine gitery remote
 if [ -n "$e2k" ]; then
 	girar='girar-e2k'
 	gitery='gitery-e2k'
+	indexbase=
 else
 	girar='girar'
 	gitery='gitery'
@@ -102,6 +106,15 @@ else
 		V git remote rename "git.alt" "$gitery"
 	fi
 	indexbase="http://ftp.altlinux.org/pub/distributions/archive/$branch/index/src"
+fi
+if [ -n "$kernelbot" ]; then
+	girar='girarbot'
+	if [ -e .git/refs/remotes/kernelbot ]; then
+		gitery='kernelbot'
+	else
+		warn "No kernelbot repo found, will push to $gitery."
+		people="/people/$USER/"
+	fi
 fi
 
 topname=$(basename "$toplevel")
@@ -143,7 +156,7 @@ tag_id=$(git show-ref --tags "$tag" | cut -d' ' -f1)
 # Remote repo name
 url=$(git remote get-url "$gitery")
 repo=$(basename "$url")
-dir_repo=${url##*:}
+dir_repo=$people${url##*:}
 
 # Determine actual version (with epoch) from first %changelog entry.
 cl=$(git show "$tag:$specfile" | sed -n '/^%changelog/,/^$/s/^*/&/p')
