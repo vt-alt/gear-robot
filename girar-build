@@ -333,7 +333,7 @@ wait_state() {
 			V ssh -n "$girar" task show --brief "$task_id" | sed 's/^/| /'
 			echo
 			if gum confirm --timeout=60s --affirmative='Abort' --negative='Wait' --default=0 "Abort the task?"; then
-				V ssh -n "$girar" task "$task_id" abort
+				V ssh -n "$girar" task abort "$task_id"
 				exit 1
 			fi
 			echo "Task $task_id is in $ttype state $task_state, waiting..."
