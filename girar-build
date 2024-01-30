@@ -119,7 +119,7 @@ fi
 
 topname=$(basename "$toplevel")
 if ! curl -fs --head "http://git.altlinux.org/people/$USER/packages/$topname.git" >/dev/null; then
-	V ssh -n "$gitery" init-db "$topname"
+	V ssh -n "$gitery" init-db "$topname" || warn "Ignoring init-db error."
 fi
 if ! git config "remote.$gitery.url" >& /dev/null; then
 	topname=$(basename "$toplevel")
