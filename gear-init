@@ -1,4 +1,5 @@
 #!/bin/bash -u
+# shellcheck disable=SC2166,SC2185,SC2022,SC2062,SC2012
 
 V() {
         printf >&2 '\e[1;32m+'
@@ -9,8 +10,8 @@ V() {
 
 mkdir -p .gear
 cr=$'\n'
-name=$(basename $PWD)
-spec=.gear/$(basename $PWD).spec
+name=$(basename "$PWD")
+spec=.gear/$name.spec
 HEAD=@
 hdesc=$(git describe --tags $HEAD)
 hdate=$(git tag -l --format='%(taggerdate:short)' $HEAD)
@@ -167,7 +168,7 @@ grep -qs pytest pyproject.toml && echo "%pyproject_run_pytest"
 echo
 
 echo "%files"
-doc=$(shopt -s nullglob; ls --file-type -d COPY* CREDITS* README* CHANGE* NEWS* AUTHOR* LICEN?E* ChangeLog* *.md *.rst *.txt | sort -u | xargs)
+doc=$(shopt -s nullglob; ls --file-type -d -- COPY* CREDITS* README* CHANGE* NEWS* AUTHOR* LICEN?E* ChangeLog* *.md *.rst *.txt | sort -u | xargs)
 [ -n "$doc" ] && echo "%define _customdocdir %_docdir/%name"
 [ -n "$doc" ] && echo "%doc $doc"
 echo "%_bindir/$name"
@@ -179,7 +180,7 @@ cat <<-EOF
 	* $cdate $packager $ver-alt1
 	- First import $hdesc ($hdate).
 EOF
-} > $spec
+} > "$spec"
 
 if [ -e vendor ]; then
 	echo "! Vendoring dir already present." >&2
@@ -187,6 +188,7 @@ else
 	if [ -e Cargo.toml ]; then
 		V cargo vendor --quiet
 		V find vendor/ \( -name '*.a' -o -name '*.lib' -o -name '*.dll' -o -name '*.obj' \) -delete
+		# shellcheck disable=SC2046
 		sed -Ei 's!,"[^"]+\.(a|lib|dll|obj)":"[^"]+"!!g' $(find vendor -name .cargo-checksum.json)
 		V git add -f Cargo.lock
 		cmd="cargo vendor (with cleanup)"
@@ -202,5 +204,5 @@ else
 	fi
 fi
 
-V git add -f .gear/rules $spec
+V git add -f .gear/rules "$spec"
 V gear-commit --no-edit "$@"
