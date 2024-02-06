@@ -11,11 +11,12 @@ export LANG=C LC_ALL=C
     RED=$'\e[1;31m'
   GREEN=$'\e[1;32m'
  DGREEN=$'\e[32m'
- YELLOW=$'\e[1;33m'
+ YELLOW=$'\e[33m'
+BYELLOW=$'\e[1;33m'
    BLUE=$'\e[1;34m'
 MAGENTA=$'\e[1;35m'
    NORM=$'\e[m'
-export BRIGHT RED DGREEN GREEN YELLOW BLUE NORM
+export BRIGHT RED DGREEN GREEN YELLOW BYELLOW BLUE NORM
 
 export GUM_CONFIRM_SELECTED_FOREGROUND=0
 
@@ -28,6 +29,10 @@ V() {
 
 warn() {
 	printf >&2 "${RED}Error: %s${NORM}\n" "$@"
+}
+info() {
+	local -n color=$1; shift
+	printf >&2 "${color}Info: %s${NORM}\n" "$@"
 }
 fatal() {
 	warn "$@"
@@ -53,6 +58,7 @@ skip_version_check=
 taillogs=--tail
 message=
 kernelbot=
+allow_test=
 while [ $# -gt 0 ]; do
 	opt=$1
 	arg=${opt#*=}
@@ -79,6 +85,7 @@ while [ $# -gt 0 ]; do
 		--skip-repo-check) skip_repo_check=y ;;
 		--skip-version-check) skip_version_check=y ;;
 		--message=*) message="-m ${arg//[[:space:]]/_}" ;;
+		--allow-test*) allow_test=y ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -222,23 +229,39 @@ else
 fi
 # shellcheck disable=SC2086
 if git log --format='%m %h %ad %s' --date=short --first-parent $selector \
-	| grep --color=auto -iP '\b(wip|test)\b'; then
-	echo "Seems to be work-in-progress build, disapproving"
-	disapprove=WIP
+	| grep --color=auto -iP '\bwip\b'; then
+	info YELLOW "Seems to be work-in-progress build (commit message)"
+	disapprove+=,WIPcommit
 fi
 # shellcheck disable=SC2086
 if git log --format='%s' --first-parent $selector | sort | uniq -c \
 	| grep -v '^      1 '; then
-	echo "Does have duplicate commit messages, disapproving"
-	disapprove=WIP
+	info YELLOW "Does have duplicate commit messages"
+	disapprove+=,DOUBLEcommits
 fi
-if [[ "$RELEASE" =~ test\|wip ]]; then
-	echo "Seems to be work-in-progress release, disapproving"
-	disapprove=WIP
+if [[ "$RELEASE" =~ wip ]]; then
+	info YELLOW "Seems to be work-in-progress release"
+	disapprove+=,WIPrelease
 fi
-if git show "$tag:$specfile" | sed -n '/^%changelog/,/^$/s/^-/&/p' | grep --color=auto -iP '\b(wip|test)\b'; then
-	echo "Seems to be work-in-progress changelog, disapproving"
-	disapprove=WIP
+if [[ "$RELEASE" =~ test ]]; then
+	info YELLOW "Seems to be test release"
+	disapprove+=,TESTrelease
+fi
+if git show "$tag:$specfile" | sed -n '/^%changelog/,/^$/s/^-/&/p' \
+	| grep --color=auto -iP '\bwip\b'; then
+	info YELLOW "Seems to be work-in-progress (changelog text)"
+	disapprove+=,WIPchangelog
+fi
+# shellcheck disable=SC2086
+if git log --format='%m %h %ad %s' --date=short --first-parent $selector \
+	| grep --color=auto -iP '\b(test|testing|tets)\b'; then
+	info YELLOW "Seems to be test build (commit message)"
+	[ -n "$allow_test" ] ||	disapprove+=,TESTcommit
+fi
+if git show "$tag:$specfile" | sed -n '/^%changelog/,/^$/s/^-/&/p' \
+	| grep --color=auto -iP '\b(test|testing|tets)\b'; then
+	info YELLOW "Seems to be test build (changelog text)"
+	[ -n "$allow_test" ] || disapprove+=,TESTchangelog
 fi
 
 # Check spelunking.
@@ -268,12 +291,17 @@ git rev-list --abbrev-commit --committer=altlinux $selector \
 done || {
 	gum confirm "Build with megacommit (with --disapprove)?" --default=0
 	warn "Megacommit check failed but user agreed to continue with --disapprove."
-	disapprove=Megacommit
+	disapprove+=,MEGAcommit
 }
 
-if [ -n "$disapprove" ] && [ -n "$no_disapprove" ]; then
-	warn "Disapproval of '$disapprove' will be skipped by user request."
-	disapprove=
+if [ -n "$disapprove" ]; then
+	if [ -n "$no_disapprove" ]; then
+		info BLUE "Disapproval of '$disapprove' will be skipped by user request."
+		disapprove=
+	else
+		disapprove=${disapprove#,}
+		warn "Disapproval because of: '$disapprove'."
+	fi
 fi
 
 V git push "$gitery" "$tag" $force
