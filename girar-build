@@ -432,6 +432,7 @@ task_run() {
 		fi
 	fi
 	[ -z "$norun" ] || return
+	# shellcheck disable=SC2086
 	V ssh -n "$girar" task run $dryrun $commit $failwhen $hurry $message "$task_id"
 
 	if [ -n "$taillogs" ]; then

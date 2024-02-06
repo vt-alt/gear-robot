@@ -474,5 +474,6 @@ setsid gear-create-tag $force
 [ -n "$push" ] && V git push gitery "$futag" $force
 
 if [[ "$build" =~ :girar ]]; then
+	# shellcheck disable=SC2086
 	girar-build $commit ${disapprove-}
 fi
