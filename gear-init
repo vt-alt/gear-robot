@@ -194,8 +194,8 @@ else
 		cmd="cargo vendor (with cleanup)"
 	fi
 	if [ -e go.mod ]; then
-		V go mod vendor
-		cmd="go mod vendor"
+		V go mod vendor -e
+		cmd="go mod vendor -e"
 	fi
 	if [ -n "$cmd" ] && [ -d vendor ]; then
 		grep -sq -w 'text' .gitattributes && echo '* -text' > vendor/.gitattributes

@@ -415,7 +415,7 @@ elif [ -f Cargo.toml ]; then
 	fi
 	V git add -f Cargo.lock
 elif [ -f go.mod ]; then
-	cmd="go mod vendor"
+	cmd="go mod vendor -e"
 	# shellcheck disable=SC2086
 	V $cmd
 fi
