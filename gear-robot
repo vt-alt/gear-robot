@@ -266,7 +266,7 @@ update_from_git_origin() {
 		   git merge-base --is-ancestor "$tag" HEAD; then
 			info "Merge OK. Continuing..."
 		else
-			fatal "Merge failed!"
+			fatal "Merge failed! (work tree unclean?)"
 		fi
 
 		if [ -v readtreemerge ]; then
