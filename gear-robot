@@ -299,9 +299,9 @@ if [ -n "$WATCH" ]; then
 	# rpm-uscan will download and verify signature (based on .watch file)
 	# but will not record result of verification anywhere (except stdout),
 	# so we will need to verify it again.
-	printf '$ rpm-uscan --watchfile=%q\n' "$WATCH" > .gear/IMPORT_OUTPUT
+	printf '$ rpm-uscan --watchfile=%q\n' "./$WATCH" > .gear/IMPORT_OUTPUT
 	set +e
-	V rpm-uscan --watchfile="$WATCH"
+	V rpm-uscan --watchfile="./$WATCH"
 	RET=$?
 	set -e
 	query=$(uscan-query -a "$WATCH" 2>/dev/null | sed 's/[[:space:]]/_/g' || :)
