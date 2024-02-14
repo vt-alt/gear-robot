@@ -305,6 +305,7 @@ if [ -n "$WATCH" ]; then
 	RET=$?
 	set -e
 	query=$(uscan-query -a "$WATCH" 2>/dev/null | sed 's/[[:space:]]/_/g' || :)
+	query=$(echo "$query" | grep -e ^FILENAME= -e ^STATUS= -e ^URL=)
 	# shellcheck disable=SC2086
 	[ -n "$query" ] && declare $query
 	[ -v STATUS ] || STATUS="uscan-query error"
