@@ -473,6 +473,8 @@ git diff
 V git add -f "$specfile"
 V gear-commit --no-edit
 git l --first-parent  -3
+git diff --quiet || fatal "Resulting git tree unclean (changed tracked files)."
+git diff --quiet --cached || fatal "Resulting git tree unclean (staged changes)."
 unset GNUPGHOME
 setsid gear-create-tag $force
 
