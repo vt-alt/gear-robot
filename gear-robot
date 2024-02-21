@@ -458,6 +458,11 @@ sed -i -E "s/^Version:.*/Version: $ver/" "$specfile"
 sed -i -E "s/^Release:.*/Release: alt1/" "$specfile"
 safe-add-changelog -e "$append_changelog" "$specfile"
 
+if grep -q '^tar:.*@version@' .gear/rules; then
+	gear-update-tag -ac
+	# git added automatically.
+fi
+
 # Build nefore tagging.
 if [[ "$build" =~ :local|:hsh|:hasher ]]; then
 	V gear-hsh --commit 2>&1 | tee build.log
