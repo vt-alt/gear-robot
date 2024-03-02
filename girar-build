@@ -255,13 +255,17 @@ fi
 # shellcheck disable=SC2086
 if git log --format='%m %h %ad %s' --date=short --first-parent $selector \
 	| grep --color=auto -iP '\b(test|testing|tets)\b'; then
-	info YELLOW "Seems to be test build (commit message)"
-	[ -n "$allow_test" ] ||	disapprove+=,TESTcommit
+	if [ -z "$allow_test" ]; then
+		info YELLOW "Seems to be test build (commit message)"
+		disapprove+=,TESTcommit
+	fi
 fi
 if git show "$tag:$specfile" | sed -n '/^%changelog/,/^$/s/^-/&/p' \
 	| grep --color=auto -iP '\b(test|testing|tets)\b'; then
-	info YELLOW "Seems to be test build (changelog text)"
-	[ -n "$allow_test" ] || disapprove+=,TESTchangelog
+	if [ -z "$allow_test" ]; then
+		info YELLOW "Seems to be test build (changelog text)"
+		disapprove+=,TESTchangelog
+	fi
 fi
 
 # Check spelunking.
