@@ -197,7 +197,7 @@ else
 		V go mod vendor -e
 		cmd="go mod vendor -e"
 	fi
-	if [ -n "$cmd" ] && [ -d vendor ]; then
+	if [ -n "${cmd-}" ] && [ -d vendor ]; then
 		grep -sq -w 'text' .gitattributes && echo '* -text' > vendor/.gitattributes
 		V git add -f -A vendor
 		V git commit -q -m "ALT: $cmd"
