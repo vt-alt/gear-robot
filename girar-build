@@ -59,6 +59,7 @@ taillogs=--tail
 message=
 kernelbot=
 allow_test=
+allow_megacommit=
 while [ $# -gt 0 ]; do
 	opt=$1
 	arg=${opt#*=}
@@ -86,6 +87,7 @@ while [ $# -gt 0 ]; do
 		--skip-version-check) skip_version_check=y ;;
 		--message=*) message="-m ${arg//[[:space:]]/_}" ;;
 		--allow-test*) allow_test=y ;;
+		--allow-mega*) allow_megacommit=y ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -287,16 +289,18 @@ onlymatches() {
 	fi
 }
 
-# shellcheck disable=SC2086
-git rev-list --abbrev-commit --committer=altlinux $selector \
-| while read -r sha; do
-	dt=$(git diff-tree --no-commit-id --name-only -r "$sha")
-	onlymatches "$sha" "$dt" '^\.gear/|\.spec$|\.patch$'
-done || {
-	gum confirm "Build with megacommit (with --disapprove)?" --default=0
-	warn "Megacommit check failed but user agreed to continue with --disapprove."
-	disapprove+=,MEGAcommit
-}
+if [ -z "$allow_megacommit" ]; then
+	# shellcheck disable=SC2086
+	git rev-list --abbrev-commit --committer=altlinux $selector \
+	| while read -r sha; do
+		dt=$(git diff-tree --no-commit-id --name-only -r "$sha")
+		onlymatches "$sha" "$dt" '^\.gear/|\.spec$|\.patch$'
+	done || {
+		gum confirm "Build with megacommit (with --disapprove)?" --default=0
+		warn "Megacommit check failed but user agreed to continue with --disapprove."
+		disapprove+=,MEGAcommit
+	}
+fi
 
 if [ -n "$disapprove" ]; then
 	if [ -n "$no_disapprove" ]; then
