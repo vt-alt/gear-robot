@@ -13,6 +13,8 @@
 set -euo pipefail
 shopt -s extglob
 
+export TZ=UTC LANG=C LC_ALL=C
+
 V() {
         printf >&2 '\e[1;32m+'
         printf >&2 ' %q' "$@"
