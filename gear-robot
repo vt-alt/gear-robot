@@ -37,7 +37,7 @@ force='' build='' push='' commit='' theirs=''
 gears_update=y
 keyserver="--auto-key-locate wkd"
 unset nosignature keyurl readtreemerge disapprove allow_rc no_fetch
-unset updatekey
+unset updatekey no_vendor no_ALT
 while [ $# -gt 0 ]; do
 	opt=$1
 	case "$opt" in
@@ -60,6 +60,7 @@ while [ $# -gt 0 ]; do
 		--rc) allow_rc=y ;;
 		--no-vendor) no_vendor=y ;;
 		--no-fetch) no_fetch=y ;;
+		--no-ALT) no_ALT=y ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -377,7 +378,9 @@ futag=$ver-alt1
 	&& fatal "Future tag $futag already exists (--force to skip this check)."
 
 # Make sure we have newer version than that in repo.
-if [ -d /ALT/ ]; then
+if [ -v no_ALT ]; then
+	info "Unreliable version check skipped."
+elif  [ -d /ALT/ ]; then
 	repo=${branch-Sisyphus}
 	srpm=( $(ls "/ALT/$repo/files/SRPMS/$NAME"-+([^-])-+([^-])".src.rpm") )
 	suff=${srpm%-*-*.src.rpm}
@@ -390,7 +393,7 @@ if [ -d /ALT/ ]; then
 		1)  info  "Package version in $repo $revr is older than $futag" ;;
 		*)  fatal "'rpmevrcmp $futag $revr' error."
 	esac
-	unset suff repo
+	unset suff repo revr srpm
 else
 	fatal "Package versions cannot be compared (cuz no /ALT/)."
 fi
