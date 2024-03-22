@@ -386,7 +386,7 @@ declare -i sub_count=0
 declare -i task_try=0
 if [ -z "$task_id" ]; then
 	# shellcheck disable=SC2086
-	task_id=$(V ssh -n "$girar" task new $branch)
+	task_id=$(trap '' INT; V ssh -n "$girar" task new $branch)
 	echo >&2 "- Creating new task $task_id"
 	task_show=
 else
