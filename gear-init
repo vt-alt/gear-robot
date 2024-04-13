@@ -1,6 +1,8 @@
 #!/bin/bash -u
 # shellcheck disable=SC2166,SC2185,SC2022,SC2062,SC2012
 
+export LC_ALL=C LANG=C
+
 V() {
         printf >&2 '\e[1;32m+'
         printf >&2 ' %q' "$@"
