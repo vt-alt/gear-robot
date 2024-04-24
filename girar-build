@@ -199,6 +199,7 @@ if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
 		lasttask=$(echo "$lastbuild" | cut -f2)
 		lastsubtask=$(echo "$lastbuild" | cut -f3)
 		cmp=$(rpmevrcmp "$evr" "$lastver")
+		skip_this_check="Add --skip-version-check to skip thsi check."
 		if [ "$cmp" -eq -1 ]; then
 			clurl="https://git.altlinux.org/tasks/$lasttask/build/$lastsubtask/changelog"
 			warn "Newer version (task $lasttask.$lastsubtask) with $lastver > $evr already in $branch"
@@ -206,10 +207,10 @@ if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
 			echo "$BRIGHT$(curl -sSfL "$clurl")$NORM"
 			[ -n "$skip_version_check" ] || exit 1
 		elif [ "$cmp" -eq 0 ]; then
-			warn "Same version $lastver already latest in $branch (task $lasttask.$lastsubtask)"
+			warn "Same version $lastver already latest in $branch (task $lasttask.$lastsubtask)" "$skip_this_check"
 			[ -n "$skip_version_check" ] || exit 1
 		elif [ "$cmp" -eq 1 ]; then
-			echo "This version $evr is newer than last ($lastver) in $branch"
+			echo "This version $evr is newer than last ($lastver) in $branch" "$skip_this_check"
 		else
 			fatal "Version comparison error $evr vs $lastver = $cmp"
 		fi
@@ -220,6 +221,7 @@ if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
 			lasttag=$(git cat-file -p "$lastgear" | grep -m1 '^tag ' || fatal "Gear tag not found in this repo, perhaps 'git fetch gears'?")
 			lasttag=${lasttag#tag }
 		fi
+		unset skip_this_check
 	fi
 fi
 
