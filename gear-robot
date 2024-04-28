@@ -185,7 +185,7 @@ update_git_subtrees() {
 
 update_from_git_origin() {
 	[ -v no_fetch ] ||
-	V git fetch origin
+	V git fetch origin --tags
 
 	# Find latest (merged) upstream tag in this branch
 	unset oldtag
