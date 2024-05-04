@@ -177,7 +177,7 @@ fi
 evr=${cl%[[:space:]]}
 evr=${evr##*[[:space:]]}
 ver=${evr#*:}
-if [[ $NAME =~ ^kernel- ]]; then
+if [[ $NAME =~ ^kernel-(modules|source|image)- ]]; then
 	[ "$NAME-$ver" = "$tag" ] || fatal "$NAME version from %changelog ($ver) does not match tag $tag"
 else
 	[ "$ver" = "$tag" ] || fatal "Version from %changelog ($ver) does not match tag $tag"
