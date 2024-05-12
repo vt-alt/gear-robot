@@ -199,7 +199,7 @@ if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
 		lasttask=$(echo "$lastbuild" | cut -f2)
 		lastsubtask=$(echo "$lastbuild" | cut -f3)
 		cmp=$(rpmevrcmp "$evr" "$lastver")
-		skip_this_check="Add --skip-version-check to skip thsi check."
+		skip_this_check="Add --skip-version-check to skip this check."
 		if [ "$cmp" -eq -1 ]; then
 			clurl="https://git.altlinux.org/tasks/$lasttask/build/$lastsubtask/changelog"
 			warn "Newer version (task $lasttask.$lastsubtask) with $lastver > $evr already in $branch"
