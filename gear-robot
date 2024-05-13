@@ -289,10 +289,13 @@ update_from_git_origin() {
 		[ -n "${specfile##.gear/*}" ] && excludes+=( ":!$specfile" )
 		if ! V git diff --exit-code --stat "$tag" @ -- "${excludes[@]}"; then
 			gum confirm "There is difference between HEAD and $tag" --affirmative='Accept' --negative='Stop' --default=0
+			cleanness=$(git diff --shortstat "$tag" @ -- "${excludes[@]}")
 		else
 			info "No difference between HEAD and $tag, good."
+			cleanness=clean
 		fi
-		unset excludes
+		V git commit --no-edit --amend --trailer "Merge-Diff: $cleanness"
+		unset excludes cleanness
 	else
 		tagstate=unknown
 	fi
