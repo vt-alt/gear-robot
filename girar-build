@@ -60,6 +60,7 @@ message=
 kernelbot=
 allow_test=
 allow_megacommit=
+revoke=
 while [ $# -gt 0 ]; do
 	opt=$1
 	arg=${opt#*=}
@@ -82,6 +83,7 @@ while [ $# -gt 0 ]; do
 		--repo=*) branch=${opt#*=} ;;
 		--dis* | --test ) disapprove=TEST ;;
 		--no-disa*) no_disapprove=y ;;
+		--revoke) revoke=y ;;
 		--tag=*) tag=${opt#*=} ;;
 		--skip-repo-check) skip_repo_check=y ;;
 		--skip-version-check) skip_version_check=y ;;
@@ -466,8 +468,28 @@ if [ -n "$subtask" ]; then
 	if [ "$tag_id" = "$task_tag_id" ]; then
 		echo >&2 "${BLUE}tag_id for subtask is the same as ours, no need to re-add.${NORM}"
 		echo >&2
-		echo "$subtext" | sed 's/^/   /' >&2
+		echo "$subtext" | sed -E \
+			-e 's/^/   /' \
+			-e "s/.*(:disapproved_by=).*/$RED&$NORM/" \
+			-e "s/.*(:approved_by=).*/$YELLOW&$NORM/" \
+			>&2
 		echo >&2
+
+		if echo "$subtext" | grep -q ":disapproved_by="; then
+			if [ -z "$revoke" ]; then
+				echo -n >&2 "${RED}Error: Subtask is "
+				echo "$subtext" | grep -Po '(?<=:)disapproved_by=.*';
+				echo >&2 "${NORM}   You may try to use --revoke."
+				exit 1
+			elif [ -n "$disapprove" ]; then
+				fatal "--revoke on task that will be auto-disapproved." \
+					"Disable disapprovals with --allow-* or --skip-* options."
+			else
+				V ssh -n "$girar" task disapprove --revoke "$task_id" "$subtask"
+				revoke=
+			fi
+		fi
+		[ -z "$revoke" ] || fatal "--revoke for non-disapproved task."
 		[ $commit = --commit ] || gum confirm "Re-run task $task_id with $sub_count subtask(s)?" --default=0
 		task_run "$task_id"
 		exit
@@ -486,6 +508,7 @@ V ssh -n "$girar" task add "$task_id" $nexttask "$dir_repo=$tag"
 sub_count+=1
 
 if [ -n "$disapprove" ]; then
+	[ -z "$revoke" ] || fatal "--revoke is inappropriate option to disable auto-disapprovals."
 	subtask=$(ssh -n "$girar" task show --brief "$task_id" | grep -F ":$repo=$tag" | grep -Po '^\s\K\d+')
 	echo "$disapprove" | V ssh girar task disapprove "$task_id" "$subtask"
 fi
