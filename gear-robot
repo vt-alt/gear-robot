@@ -294,7 +294,7 @@ update_from_git_origin() {
 			info "No difference between HEAD and $tag, good."
 			cleanness=clean
 		fi
-		V git commit --no-edit --amend --trailer "Merge-Diff: $cleanness"
+		V git commit --no-edit --amend --trailer "Diff-After-Merge: $cleanness"
 		unset excludes cleanness
 	else
 		tagstate=unknown
