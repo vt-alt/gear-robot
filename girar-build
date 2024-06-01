@@ -204,7 +204,7 @@ if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
 		skip_this_check="Add --skip-version-check to skip this check."
 		if [ "$cmp" -eq -1 ]; then
 			clurl="https://git.altlinux.org/tasks/$lasttask/build/$lastsubtask/changelog"
-			warn "Newer version (task $lasttask.$lastsubtask) with $lastver > $evr already in $branch"
+			warn "Newer version (task $lasttask.$lastsubtask) with $lastver > $evr already in $branch" "$skip_this_check"
 			echo "Changelog entry for it:"
 			echo "$BRIGHT$(curl -sSfL "$clurl")$NORM"
 			[ -n "$skip_version_check" ] || exit 1
@@ -212,7 +212,7 @@ if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
 			warn "Same version $lastver already latest in $branch (task $lasttask.$lastsubtask)" "$skip_this_check"
 			[ -n "$skip_version_check" ] || exit 1
 		elif [ "$cmp" -eq 1 ]; then
-			echo "This version $evr is newer than last ($lastver) in $branch" "$skip_this_check"
+			echo "This version $evr is newer than last ($lastver) in $branch"
 		else
 			fatal "Version comparison error $evr vs $lastver = $cmp"
 		fi
