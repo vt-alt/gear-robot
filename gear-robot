@@ -425,7 +425,9 @@ cmd=
 if [ -v no_vendor ]; then
 	:
 elif [ -f Cargo.toml ]; then
-	if type -p cargo-vendor-filterer-no >/dev/null; then
+	if [ ! -e Cargo.lock ]; then
+		info "No Cargo.lock, no vendoring."
+	elif type -p cargo-vendor-filterer-no >/dev/null; then
 		cmd="cargo vendor-filterer"
 		rm -rf vendor
 		V cargo vendor-filterer \
@@ -439,7 +441,8 @@ elif [ -f Cargo.toml ]; then
 		# shellcheck disable=SC2046
 		sed -Ei 's!,"[^"]+\.(a|lib|dll|obj)":"[^"]+"!!g' $(find vendor -name .cargo-checksum.json)
 	fi
-	V git add -f Cargo.lock
+	[ -e Cargo.lock ] &&
+		V git add -f Cargo.lock
 elif [ -f go.mod ]; then
 	cmd="go mod vendor -e"
 	# shellcheck disable=SC2086
