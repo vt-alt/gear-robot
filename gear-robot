@@ -10,7 +10,7 @@
 # shellcheck source=/usr/bin/gear-utils-sh-functions
 . gear-utils-sh-functions
 
-set -euo pipefail
+set -eu
 shopt -s extglob
 
 export TZ=UTC LANG=C LC_ALL=C
