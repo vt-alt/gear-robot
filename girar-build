@@ -287,7 +287,9 @@ onlymatches() {
 	if echo "$msg" | grep -qP -e "$re"; then
 		if echo "$msg" | grep -qP -ve "$re"; then
 			warn "Commit $sha is megacommit ($re)"
-			git show --stat --oneline "$sha"
+			git log --no-walk --oneline "$sha"
+			echo "--- file triggering megacommit warning ---"
+			echo "$msg" | grep --color=always -P -e "$re"
 			fatal "Megacommit found."
 		fi
 	fi
