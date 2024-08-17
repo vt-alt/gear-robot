@@ -98,7 +98,7 @@ EOF
 if [ -e Cargo.toml ]; then
 	cat <<-"EOFF"
 	mkdir -p .cargo
-	cat >> .cargo/config <<EOF
+	cat >> .cargo/config.toml <<EOF
 	[source.crates-io]
 	replace-with = "vendored-sources"
 
