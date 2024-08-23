@@ -56,6 +56,7 @@ while [ $# -gt 0 ]; do
 		--keyserver=ubuntu) keyserver="--keyserver hkps://keyserver.ubuntu.com" ;;
 		--keyserver) shift; keyserver="--keyserver $1" ;;
 		--update-key) updatekey=y ;;
+		--key=github) keyurl="https://github.com/web-flow.gpg" ;;
 		--key=*) keyurl=${opt#*=} ;;
 		--nosig* | --no-sig*) nosignature=y ;;
 		--read-tree) readtreemerge=y ;;
