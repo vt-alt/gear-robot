@@ -127,7 +127,12 @@ fi
 echo
 
 echo "%build"
-[ -e configure -o -e configure.in -o -e configure.ac ] && echo "%autoreconf"
+if [ -e Makefile.am -o -e configure.in -o -e configure.ac ]; then
+	echo "%autoreconf"
+	[ -e configure ] && echo "%configure"
+else
+	[ -e configure ] && echo "./configure"
+fi
 [ -e configure -o -e Makefile -o -e Makefile.in -o -e Makefile.am ] && echo "%make_build"
 [ -e Cargo.toml ] && echo "cargo build %_smp_mflags --offline --release --all-features"
 if [ -e go.mod ]; then
