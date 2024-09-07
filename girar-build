@@ -220,7 +220,8 @@ if [ -n "$indexbase" ] && [ -z "$skip_repo_check" ]; then
 		lastgear=$(echo "$lastbuild" | cut -f5)
 		if [ -n "$lastgear" ]; then
 			lastgear=${lastgear#gear:}
-			lasttag=$(git cat-file -p "$lastgear" | grep -m1 '^tag ' || fatal "Gear tag not found in this repo, perhaps 'git fetch gears'?")
+			lasttag=$(git cat-file -p "$lastgear" | grep -m1 '^tag ' ||
+				fatal "Gear tag not found in this repo, perhaps 'git fetch gears' or --skip-repo-check?")
 			lasttag=${lasttag#tag }
 		fi
 		unset skip_this_check
