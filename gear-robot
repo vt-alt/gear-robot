@@ -260,12 +260,17 @@ update_from_git_origin() {
 		elif ! V git merge $mergeopts --progress $cleanup $theirs --no-edit -F "$msg" "$tag"; then
 			if [ -t 0 ]; then
 				echo >&2
-				echo ">>>>>>> This is merge failure shell." >&2
+				echo -e "\e[1;31m>>>>>>> This is merge failure shell. Merge will be aborted after exiting.\e[m" >&2
 				# Try manual merge if user is here.
+				# shellcheck disable=SC2016
 				GIT_PS1_SHOWCOLORHINTS=true \
 				GIT_PS1_SHOWDIRTYSTATE=true \
-				PS1='\w\[\033[1;35m\]$(__git_ps1)\[\033[m\]> ' \
-				bash --rcfile <(cat ~/.bashrc; echo . /usr/share/git-core/contrib/completion/git-prompt.sh) || :
+				bash --rcfile <(
+					cat ~/.bashrc
+					echo . /usr/share/git-core/contrib/completion/git-prompt.sh
+					printf 'PS1=%q\n' '\w\[\033[1;35m\]$(__git_ps1)\[\033[m\]> '
+				) || :
+				(set -x; git merge --abort)
 			fi
 		fi
 
