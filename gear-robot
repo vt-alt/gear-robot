@@ -61,7 +61,7 @@ while [ $# -gt 0 ]; do
 		--nosig* | --no-sig*) nosignature=y ;;
 		--read-tree) readtreemerge=y ;;
 		--disa*) disapprove=$opt ;;
-		--rc) allow_rc=y ;;
+		--allow-rc | --rc) allow_rc=y ;;
 		--no-vendor) no_vendor=y ;;
 		--no-submodules) no_submodules=y ;;
 		--no-fetch) no_fetch=y ;;
