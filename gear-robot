@@ -37,8 +37,8 @@ info() {
 
 force='' build='' push='' commit='' theirs=''
 gears_update=y
-keyserver="--auto-key-locate wkd"
-unset nosignature keyurl readtreemerge disapprove allow_rc no_fetch
+unset keyserver keyurl
+unset nosignature readtreemerge disapprove allow_rc no_fetch
 unset updatekey no_vendor no_ALT no_submodules all_tags
 mergeopts=
 while [ $# -gt 0 ]; do
@@ -55,9 +55,9 @@ while [ $# -gt 0 ]; do
 		--all) build=:hsh:girar ;;
 		--keyserver=ubuntu) keyserver="--keyserver hkps://keyserver.ubuntu.com" ;;
 		--keyserver) shift; keyserver="--keyserver $1" ;;
-		--update-key) updatekey=y ;;
 		--key=github) keyurl="https://github.com/web-flow.gpg" ;;
 		--key=*) keyurl=${opt#*=} ;;
+		--update-key) updatekey=y ;;
 		--nosig* | --no-sig*) nosignature=y ;;
 		--read-tree) readtreemerge=y ;;
 		--disa*) disapprove=$opt ;;
@@ -72,6 +72,15 @@ while [ $# -gt 0 ]; do
 	esac
 	shift
 done
+
+if [ -v keyserver ]; then
+	updatekey=y
+else
+	keyserver="--auto-key-locate wkd"
+fi
+if [ -v keyurl ]; then
+	updatekey=y
+fi
 
 # Update repos
 if [ -v gears_update ]; then
