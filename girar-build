@@ -61,6 +61,7 @@ kernelbot=
 allow_test=
 allow_megacommit=
 revoke=
+task_deps=
 while [ $# -gt 0 ]; do
 	opt=$1
 	arg=${opt#*=}
@@ -90,6 +91,7 @@ while [ $# -gt 0 ]; do
 		--message=*) message="-m ${arg//[[:space:]]/_}" ;;
 		--allow-test*) allow_test=y ;;
 		--allow-mega*) allow_megacommit=y ;;
+		--deps=*) task_deps=${opt#*=} ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -510,6 +512,9 @@ fi
 V ssh -n "$girar" task add "$task_id" $nexttask "$dir_repo=$tag"
 sub_count+=1
 
+if [ -n "$task_deps" ]; then
+	V ssh -n "$girar" task deps "$task_id" add "$task_deps"
+fi
 if [ -n "$disapprove" ]; then
 	[ -z "$revoke" ] || fatal "--revoke is inappropriate option to disable auto-disapprovals."
 	subtask=$(ssh -n "$girar" task show --brief "$task_id" | grep -F ":$repo=$tag" | grep -Po '^\s\K\d+')
