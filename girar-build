@@ -394,6 +394,7 @@ task_state=
 declare -i sub_count=0
 declare -i task_try=0
 if [ -z "$task_id" ]; then
+	[ "$branch" != sisyphus ] && [ -z "$message" ] && fatal "You must specify --message= for new task in $branch."
 	# shellcheck disable=SC2086
 	task_id=$(trap '' INT; V ssh -n "$girar" task new $branch)
 	echo >&2 "- Creating new task $task_id"
@@ -405,6 +406,9 @@ else
 	task_show=$(ssh -n "$girar" task show --brief "$task_id")
 	sub_count=$(echo "$task_show" | grep -E '^[[:space:]]*[[:digit:]]+:' -c)
 	task_try=$(echo "$task_show" | head -1 | grep -oP '(?<=\btry=)\d+' || echo 0)
+	if [ "$branch" != sisyphus ] && [ -z "$message" ]; then
+		echo "$task_show" | grep -q ' message=.' || fatal "You must specify --message= for existing task in $branch."
+	fi
 fi
 unset task_matched
 unset task_state
