@@ -309,7 +309,7 @@ update_from_git_origin() {
 
 		# Diff to the merged tag excluding .gear and spec.
 		excludes=()
-		for f in .gear .geer-rules vendor altlinux; do
+		for f in .gear .geer-rules vendor altlinux ${READ_TREE_EXCLUDE-}; do
 			git cat-file -e "$tag:$f" 2>/dev/null && continue
 			[ -e "$f" ] && excludes+=( ":!$f" )
 		done
