@@ -195,6 +195,13 @@ update_git_subtrees() {
 			V git subtree pull -P "$prefix" "$remote" "$branch" $args -m "Pull subtree $prefix from $remote $branch"
 		done < .gear/subtrees
 	fi
+
+	local r
+	for r in */.gitrepo; do
+		[ -f "$r" ] || continue
+		# Cannot 'pull' due to git subrepo bugs.
+		READ_TREE_EXCLUDE+=" $(dirname "$r")"
+	done
 }
 
 update_from_git_origin() {
