@@ -39,7 +39,7 @@ force='' build='' push='' commit='' theirs=''
 gears_update=y
 unset keyserver keyurl
 unset nosignature readtreemerge disapprove allow_rc no_fetch
-unset updatekey no_vendor no_ALT no_submodules all_tags
+unset updatekey no_vendor no_ALT no_submodules all_tags select_tag
 mergeopts=
 while [ $# -gt 0 ]; do
 	opt=$1
@@ -68,6 +68,7 @@ while [ $# -gt 0 ]; do
 		--no-ALT) no_ALT=y ;;
 		--allow-unrelated-histories) mergeopts+=" $opt" ;;
 		--all-tags) all_tags=y ;;
+		--tag=*) select_tag=${opt#*=} ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -222,6 +223,7 @@ update_from_git_origin() {
 	# Find new tags
 	tags=()
 	while read -r tag; do
+		[ -v select_tag ] && [ "$select_tag" != "$tag" ] && continue
 		[ ! -v allow_rc ] && [[ $tag =~ -alt|^gb-|rc|beta|alpha ]] && continue
 		[ ! -v all_tags ] &&
 		# --is-ancestor: Check if the first <commit> is an ancestor of the second <commit>, and exit with status 0 if true.
