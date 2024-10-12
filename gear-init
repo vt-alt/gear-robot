@@ -74,7 +74,6 @@ cat <<-EOF
 EOF
 [ -e pyproject.toml -o -e setup.py ] && echo "BuildArch: noarch"
 [ -e pyproject.toml -o -e setup.py ] && echo "BuildRequires(pre): rpm-build-python3"
-[ -e Cargo.toml ] && echo "BuildRequires: /proc"
 [ -e Cargo.toml ] && echo "BuildRequires: rust-cargo"
 [ -e go.mod ] && echo "BuildRequires: golang"
 [ -e pyproject.toml -o -e setup.py ] && echo "BuildRequires: python3-devel"
