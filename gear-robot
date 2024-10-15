@@ -521,11 +521,13 @@ fi
 
 # Build nefore tagging.
 if [[ "$build" =~ :local|:hsh|:hasher ]]; then
+	set -o pipefail
 	V gear-hsh --commit 2>&1 | tee build.log
+	set +o pipefail
 fi
 
 # Tag.
-git diff
+V git diff
 V git add -f "$specfile"
 V gear-commit --no-edit
 git l --first-parent  -3
