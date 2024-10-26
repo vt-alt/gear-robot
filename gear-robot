@@ -197,11 +197,12 @@ update_git_subtrees() {
 		done < .gear/subtrees
 	fi
 
-	local r
+	local r dir
 	for r in */.gitrepo; do
 		[ -f "$r" ] || continue
-		# Cannot 'pull' due to git subrepo bugs.
-		READ_TREE_EXCLUDE+=" $(dirname "$r")"
+		dir=$(dirname "$r")
+		V git subrepo pull "$dir"
+		READ_TREE_EXCLUDE+=" $dir"
 	done
 }
 
