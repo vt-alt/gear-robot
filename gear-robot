@@ -297,7 +297,7 @@ update_from_git_origin() {
 		if [ -e .gitmodules ] &&
 			! git diff --quiet &&
 		       	git submodule status --recursive | grep -q .; then
-			V git submodule update --init --recursive --progress --checkout
+			V git submodule update --init --recursive --progress --checkout --no-fetch
 		fi
 
 		# Check results.
