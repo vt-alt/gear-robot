@@ -181,6 +181,12 @@ acquire_gpg_key() {
 	V git commit -m "ALT: Import GPG key for $who" -m "$gpg_command"
 }
 
+if [ -v no_vendor ]; then
+	:
+elif [ -f Cargo.toml -a -e Cargo.lock ] || [ -f go.mod ]; then
+	READ_TREE_EXCLUDE+=" vendor"
+fi
+
 update_git_subtrees() {
 	if [ -s .gear/subtrees ]; then
 		READ_TREE_EXCLUDE+=" $(awk '/^[[:space:]]*[^#]/ {print $1}' .gear/subtrees)"
