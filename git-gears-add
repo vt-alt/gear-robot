@@ -27,6 +27,12 @@ if git remote | grep -qxF 'gears'; then
 else
 	git remote add 'gears' "$url"
 fi
+
+if ! git ls-remote gears >/dev/null 2>&1; then
+	echo >&2 "gears-add: Remote repo does not exist, skipping."
+	exit 0
+fi
+
 V git fetch 'gears'
 
 br=$(git branch --show-current)
