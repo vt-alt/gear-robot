@@ -87,8 +87,12 @@ fi
 if [ -v gears_update ]; then
 	# Add, update, and rebase over gears repo.
 	V git gears-add
-	# Show extra commits we have, should be none in normal circumstances.
-	git l "gears/${branch-sisyphus}.."
+	if git show-ref --verify --quiet "refs/heads/gears/${branch-sisyphus}"; then
+		# Show extra commits we have, should be none in normal circumstances.
+		git l "gears/${branch-sisyphus}.."
+	else
+		no_ALT=y
+	fi
 fi
 
 export disable_specsubst=1
