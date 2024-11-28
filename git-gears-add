@@ -16,7 +16,7 @@ description="$(gear --describe --disable-specsubst ${commit:+-t "$commit"} ||:)"
 if [ -n "$description" ]; then
 	name="${description%% *}"
 else
-	echo >&2 "Guess name from the directory."
+	echo >&2 "gears-add: Guess name from the directory."
 	name=$(basename "$PWD")
 fi
 
@@ -39,14 +39,14 @@ br=$(git branch --show-current)
 
 if git diff --quiet &&
    git diff --quiet --cached; then
-	echo >&2 "Work tree of $br is clean."
+	echo >&2 "gears-add: Work tree of $br is clean."
 else
-	echo >&2 "Work tree of $br is unclean, aborting."
+	echo >&2 "gears-add: Work tree of $br is unclean, aborting."
 	exit 1
 fi
 
 if ! git show-ref -q "gears/$br"; then
-	echo >&2 "$br does not exist on gears remote, aborting."
+	echo >&2 "gears-add: $br does not exist on gears remote, aborting."
 	exit 1
 fi
 git branch -q --set-upstream-to="gears/$br" "$br"
