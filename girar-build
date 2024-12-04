@@ -279,8 +279,9 @@ fi
 
 # Check spelunking.
 # shellcheck disable=SC2086
-if ! git log -s --format=%B --committer=altlinux $selector | codespell -; then
-	gum confirm "codespell errors in commit messages, continue?"
+if ! git log -s --format=%B --committer=altlinux $selector | codespell - ||
+   ! git log -s --format=%B --committer=altlinux $selector | typos -; then
+	gum confirm "codespell/typos errors in commit messages, continue?"
 fi
 
 # Check megacommits.
