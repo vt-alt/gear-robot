@@ -164,7 +164,7 @@ echo
 
 echo "%check"
 [ -e pyproject.toml -o -e setup.py ] && echo "export PYTHONPATH=%buildroot%python3_sitelibdir"
-echo "%buildroot%_bindir/$name --version |& grep -Pw '\Q%version\E'"
+echo "%buildroot%_bindir/$name --version | grep -Pw '\Q%version\E'"
 [ -e go.mod ] && echo "go test ./..."
 [ -e Cargo.toml ] && echo "cargo test --release"
 grep -qs Makefile* '^check:' && echo "%make_build check"
