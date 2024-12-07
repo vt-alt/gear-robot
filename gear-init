@@ -74,6 +74,11 @@ cat <<-EOF
 EOF
 [ -e pyproject.toml -o -e setup.py ] && echo "BuildArch: noarch"
 [ -e pyproject.toml -o -e setup.py ] && echo "BuildRequires(pre): rpm-build-python3"
+if [ -e CMakeLists.txt ]; then
+	echo "BuildRequires(pre): rpm-build-cmake"
+	echo "BuildRequires: cmake"
+	grep -q 'enable_language(CXX)' CMakeLists.txt && echo "BuildRequires: gcc-c++"
+fi
 [ -e Cargo.toml ] && echo "BuildRequires: rust-cargo"
 [ -e go.mod ] && echo "BuildRequires: golang"
 [ -e pyproject.toml -o -e setup.py ] && echo "BuildRequires: python3-devel"
@@ -83,6 +88,11 @@ EOF
 if grep -qs pytest pyproject.toml; then
 	echo "%{?!_without_check:%{?!_disable_check:"
 	echo "BuildRequires: pytest3"
+	echo "}}"
+fi
+if [ -e CMakeLists.txt ] && grep -q 'include(CTest)' CMakeLists.txt; then
+	echo "%{?!_without_check:%{?!_disable_check:"
+	echo "BuildRequires: ctest"
 	echo "}}"
 fi
 echo
@@ -133,6 +143,11 @@ else
 	[ -e configure ] && echo "./configure"
 fi
 [ -e configure -o -e Makefile -o -e Makefile.in -o -e Makefile.am ] && echo "%make_build"
+if [ -e CMakeLists.txt ]; then
+       echo "%cmake"
+       grep -w 'option(.\+)' CMakeLists.txt | sed 's/^\s*/# /'
+fi
+[ -e CMakeLists.txt ] && echo "%cmake_build"
 [ -e Cargo.toml ] && echo "cargo build %_smp_mflags --offline --release --all-features"
 if [ -e go.mod ]; then
 	main=$(git grep -l '^func main' -- ':!vendor')
@@ -151,6 +166,7 @@ echo
 
 echo "%install"
 [ -e configure -o -e Makefile -o -e Makefile.in -o -e Makefile.am ] && echo "%makeinstall_std"
+[ -e CMakeLists.txt ] && echo "%cmake_install"
 [ -e Cargo.toml ] && echo "install -Dp target/release/%name -t %buildroot%_bindir"
 if [ -e go.mod ]; then
 	for i in $main; do
@@ -163,6 +179,7 @@ fi
 echo
 
 echo "%check"
+[ -e CMakeLists.txt ] && echo "%cmake_build --target test"
 [ -e pyproject.toml -o -e setup.py ] && echo "export PYTHONPATH=%buildroot%python3_sitelibdir"
 echo "%buildroot%_bindir/$name --version | grep -Pw '\Q%version\E'"
 [ -e go.mod ] && echo "go test ./..."
