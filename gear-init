@@ -65,7 +65,7 @@ cat <<-EOF
 	Name: $name
 	Version: $ver
 	Release: alt1
-	Summary: $summary
+	Summary: ${summary%.}
 	License: $license
 	Group: Other
 	Url: $url
