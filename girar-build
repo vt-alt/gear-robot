@@ -39,7 +39,8 @@ fatal() {
 	exit 1
 }
 
-force=
+force_local=
+force_remote=
 commit=--test-only
 norun=
 dryrun=
@@ -66,7 +67,8 @@ while [ $# -gt 0 ]; do
 	opt=$1
 	arg=${opt#*=}
 	case "$opt" in
-		-f | --force) force=-f ;;
+		-f | --force-tag) force_local=-f ;;
+		-F | --force-push) force_remote=-f ;;
 		--tail) taillogs=--tail ;;
 		-w | --wait) taillogs=--wait ;;
 		-W | --no-wait | --no-tail) taillogs= ;;
@@ -156,9 +158,9 @@ if [ -z "${tag-}" ]; then
 	elif [ ${#tag[@]} -ne 1 ]; then
 		echo "${BLUE}Top level commit is not tagged with -alt tag!$NORM"
 		havetag=$(git tag -l "$VERSION-$RELEASE")
-		[ -n "$havetag" ] && [ -z "$force" ] && fatal "Run with -f to force new tag"
-		gum confirm "Run gear-create-tag $force?"
-		gear-create-tag $force
+		[ -n "$havetag" ] && [ -z "$force_local" ] && fatal "Run with -f to force new tag"
+		gum confirm "Run gear-create-tag $force_local?"
+		gear-create-tag $force_local
 		unset havetag
 		tag=( $(git tag --points-at @ "$VERSION-$RELEASE") )
 	fi
@@ -322,7 +324,7 @@ if [ -n "$disapprove" ]; then
 	fi
 fi
 
-V git push "$gitery" "$tag" $force
+V git push "$gitery" "$tag" $force_remote
 
 # Determine target task number
 if [ -n "$task_id" ]; then
