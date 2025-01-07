@@ -324,6 +324,14 @@ if [ -n "$disapprove" ]; then
 	fi
 fi
 
+if [ -n "${lasttag-}" ]; then
+	selector="$lasttag~1..$tag"
+else
+	selector="-4 $tag"
+fi
+# shellcheck disable=SC2086
+V git l --first-parent $selector
+
 V git push "$gitery" "$tag" $force_remote
 
 # Determine target task number
