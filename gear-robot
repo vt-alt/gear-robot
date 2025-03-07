@@ -420,7 +420,7 @@ else
 	esac
 	# Delete letter prefixes with a dash. Then delete version prefix 'v'.
 	ver=${tag##+([[:alpha:]])[_-]}
-	ver=${ver#*[Vv]}
+	ver=${ver#*[Vvb]}
 	[ -z "${ver##*[_-]*}" ] && ver="${ver//[_-]/.}"
 	info "Top tag is $tag ($tagstate), Version: $ver"
 fi
