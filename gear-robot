@@ -191,6 +191,9 @@ elif [ -f Cargo.toml -a -e Cargo.lock ] || [ -f go.mod ]; then
 	READ_TREE_EXCLUDE+=" vendor"
 fi
 
+[ -s .gear/read-tree-excludes ] &&
+	READ_TREE_EXCLUDE+=" $(xargs < .gear/read-tree-excludes)"
+
 update_git_subtrees() {
 	if [ -s .gear/subtrees ]; then
 		READ_TREE_EXCLUDE+=" $(awk '/^[[:space:]]*[^#]/ {print $1}' .gear/subtrees)"
