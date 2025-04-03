@@ -93,6 +93,7 @@ while [ $# -gt 0 ]; do
 		--message=*) message="-m ${arg//[[:space:]]/_}" ;;
 		--allow-test*) allow_test=y ;;
 		--allow-mega*) allow_megacommit=y ;;
+		--allow-short-tag) allow_short_tag=y ;;
 		--deps=*) task_deps=${opt#*=} ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
@@ -183,8 +184,8 @@ fi
 evr=${cl%[[:space:]]}
 evr=${evr##*[[:space:]]}
 ver=${evr#*:}
-if [[ $NAME =~ ^kernel-(modules|source|image)- ]] || [[ $(git branch --show-current) = */* ]]; then
-	[ "$NAME-$ver" = "$tag" ] || fatal "$NAME version from %changelog ($ver) does not match tag $tag"
+if [ ! -v allow_short_tag ] && [[ $NAME =~ ^kernel-(modules|source|image)- ]] || [[ $(git branch --show-current) = */* ]]; then
+	[ "$NAME-$ver" = "$tag" ] || fatal "Kernel related $NAME version from %changelog ($NAME-$ver) does not match tag $tag"
 else
 	[ "$ver" = "$tag" ] || fatal "Version from %changelog ($ver) does not match tag $tag"
 fi
