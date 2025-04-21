@@ -496,11 +496,19 @@ if [ -n "$subtask" ]; then
 			>&2
 		echo >&2
 
-		if echo "$subtext" | grep -q ":disapproved_by="; then
+		disapprovals=$(echo "$subtext" | grep ":disapproved_by=" || :)
+		if [ -n "$disapprovals" ]; then
 			if [ -z "$revoke" ]; then
-				echo -n >&2 "${RED}Error: Subtask is "
-				echo "$subtext" | grep -Po '(?<=:)disapproved_by=.*';
-				echo >&2 "${NORM}   You may try to use --revoke."
+				for dt in $disapprovals; do
+					dt_id=${disapprovals%%:*}
+					dt_id=${dt_id#[[:space:]]}
+					dt_by=${disapprovals##*=}
+					dt_by=${dt_by%[[:space:]]}
+					dt_url="https://git.altlinux.org/tasks/$task_id/acl/disapproved/$dt_id/$dt_by"
+					dt_reason=$(curl -sSL "$dt_url" | tr '\n' '|')
+					echo >&2 "${RED}Error: Subtask $dt_id ACL: $dt_reason$NORM"
+				done
+				echo >&2 "   You may try to use --revoke."
 				exit 1
 			elif [ -n "$disapprove" ]; then
 				fatal "--revoke on task that will be auto-disapproved." \
