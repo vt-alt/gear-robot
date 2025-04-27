@@ -172,7 +172,11 @@ tag_id=$(git show-ref --tags "$tag" | cut -d' ' -f1)
 # Remote repo name
 url=$(git remote get-url "$gitery")
 repo=$(basename "$url")
-dir_repo=$people${url##*:}
+if [[ $url == ssh://* ]]; then
+	dir_repo=$people/${url#*://*/}
+else
+	dir_repo=$people${url#*:}
+fi
 
 # Determine actual version (with epoch) from first %changelog entry.
 cl=$(git show "$tag:$specfile" | sed -n '/^%changelog/,/^$/s/^*/&/p')
