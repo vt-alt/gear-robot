@@ -40,6 +40,7 @@ gears_update=y
 unset keyserver keyurl
 unset nosignature readtreemerge disapprove allow_rc no_fetch
 unset updatekey no_vendor no_ALT no_submodules all_tags select_tag
+unset no_watch
 mergeopts=
 while [ $# -gt 0 ]; do
 	opt=$1
@@ -68,7 +69,8 @@ while [ $# -gt 0 ]; do
 		--no-ALT) no_ALT=y ;;
 		--allow-unrelated-histories) mergeopts+=" $opt" ;;
 		--all-tags) all_tags=y ;;
-		--tag=*) select_tag=${opt#*=} ;;
+		--tag=*) select_tag=${opt#*=} ;&
+		--no-watch) no_watch=y ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -114,8 +116,9 @@ find_watchfile() {
 		WATCH=
 	done
 }
+WATCH=
+[ -v no_watch ] || find_watchfile
 
-find_watchfile
 # Prepare GPG
 export GNUPGHOME=.gear/.gnupg
 rm -rf "$GNUPGHOME"
