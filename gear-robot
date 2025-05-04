@@ -538,9 +538,13 @@ fi
 
 # Build nefore tagging.
 if [[ "$build" =~ :local|:hsh|:hasher ]]; then
-	set -o pipefail
-	V gear-hsh --commit 2>&1 | tee build.log
-	set +o pipefail
+	if type bb &> /dev/null; then
+		V bb
+	else
+		set -o pipefail
+		V gear-hsh --commit 2>&1 | tee build.log
+		set +o pipefail
+	fi
 fi
 
 # Tag.
