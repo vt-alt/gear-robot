@@ -40,7 +40,7 @@ gears_update=y
 unset keyserver keyurl
 unset nosignature readtreemerge disapprove allow_rc no_fetch
 unset updatekey no_vendor no_ALT no_submodules all_tags select_tag
-unset no_watch
+unset no_watch allow_difference
 mergeopts=
 while [ $# -gt 0 ]; do
 	opt=$1
@@ -68,6 +68,7 @@ while [ $# -gt 0 ]; do
 		--no-fetch) no_fetch=y ;;
 		--no-ALT) no_ALT=y ;;
 		--allow-unrelated-histories) mergeopts+=" $opt" ;;
+		--allow-diff) allow_difference=y ;;
 		--all-tags) all_tags=y ;;
 		--tag=*) select_tag=${opt#*=} ;&
 		--no-watch) no_watch=y ;;
@@ -341,6 +342,7 @@ update_from_git_origin() {
 		done
 		[ -n "${specfile##.gear/*}" ] && excludes+=( ":!$specfile" )
 		if ! V git diff --exit-code --stat "$tag" @ -- "${excludes[@]}"; then
+			[ -v allow_difference ] ||
 			gum confirm "There is difference between HEAD and $tag" --affirmative='Accept' --negative='Stop' --default=0
 			cleanness=$(git diff --shortstat "$tag" @ -- "${excludes[@]}")
 		else
