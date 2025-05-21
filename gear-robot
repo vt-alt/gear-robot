@@ -342,9 +342,14 @@ update_from_git_origin() {
 		done
 		[ -n "${specfile##.gear/*}" ] && excludes+=( ":!$specfile" )
 		if ! V git diff --exit-code --stat "$tag" @ -- "${excludes[@]}"; then
-			[ -v allow_difference ] ||
-			gum confirm "There is difference between HEAD and $tag" --affirmative='Accept' --negative='Stop' --default=0
-			cleanness=$(git diff --shortstat "$tag" @ -- "${excludes[@]}")
+			if [ ! -v allow_difference ]; then
+				lines=$(git diff "$tag" @ -- "${excludes[@]}" | wc -l)
+				if [ "$lines" -lt 200 ]; then
+					V git --no-pager diff "$tag" @ -- "${excludes[@]}"
+				fi
+				gum confirm "There is difference between HEAD and $tag" --affirmative='Accept' --negative='Stop' --default=0
+				cleanness=$(git diff --shortstat "$tag" @ -- "${excludes[@]}")
+			fi
 		else
 			info "No difference between HEAD and $tag, good."
 			cleanness=clean
