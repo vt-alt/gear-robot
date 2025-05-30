@@ -40,7 +40,7 @@ gears_update=y
 unset keyserver keyurl
 unset nosignature readtreemerge disapprove allow_rc no_fetch
 unset updatekey no_vendor no_ALT no_submodules all_tags select_tag
-unset no_watch allow_difference
+unset no_watch allow_difference cherry_pick
 mergeopts=
 while [ $# -gt 0 ]; do
 	opt=$1
@@ -72,6 +72,7 @@ while [ $# -gt 0 ]; do
 		--all-tags) all_tags=y ;;
 		--tag=*) select_tag=${opt#*=} ;&
 		--no-watch) no_watch=y ;;
+		--pick) shift; cherry_pick=$1 ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 	shift
@@ -508,6 +509,10 @@ if [ -n "$cmd" ] && [ -d vendor ]; then
 	else
 		V git commit -q -m "ALT: $cmd"
 	fi
+fi
+
+if [ -v cherry_pick ]; then
+	V git cherry-pick $cherry_pick
 fi
 
 sver=$(grep -Po '^Version:\s*\K\S+' "$specfile")
