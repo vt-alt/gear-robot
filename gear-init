@@ -136,9 +136,12 @@ fi
 echo
 
 echo "%build"
-if [ -e Makefile.am -o -e configure.in -o -e configure.ac ]; then
-	echo "%autoreconf"
-	[ -e configure ] && echo "%configure"
+[ -e Makefile.am ] && echo "%autoreconf"
+if [ -e configure.in -o -e configure.ac ]; then
+	echo "%configure"
+	if grep -sq PKG_CHECK_MODULES configure.ac; then
+		grep -w 'PKG_CHECK_MODULES' configure.ac | sed 's/^\s*/# /'
+	fi
 else
 	[ -e configure ] && echo "./configure"
 fi
