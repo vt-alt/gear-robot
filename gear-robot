@@ -413,6 +413,7 @@ fi
 git cat-file -p @ | grep -q '^committer .*@altlinux.org>' || fatal "Foreign merge commit."
 
 # Continue after we have merged upstream sources.
+rel=alt1
 if [ -n "$WATCH" ]; then
 	log=$(git log --format=%s -n1)
 	case "$log" in
@@ -433,14 +434,19 @@ else
 	ver=${tag##+([[:alpha:]])[_-]}
 	ver=${ver#*[Vvb]}
 	[ -z "${ver##*[_-]*}" ] && ver="${ver//[_-]/.}"
-	info "Top tag is $tag ($tagstate), Version: $ver"
+	if [[ $ver =~ (.*?)(rc.*) ]]; then
+		ver=${BASH_REMATCH[1]}
+		ver=${ver%[-_.]}
+		rel=alt0.${BASH_REMATCH[2]}
+	fi
+	info "Top tag is $tag ($tagstate), Version: $ver Release: $rel"
 fi
 if [[ ! "$ver" =~ ^[[:digit:]]+(.[[:digit:]]+)*$ ]]; then
 	# shellcheck disable=SC2015
 	[ -v allow_rc ] && disapprove=y || fatal "Unknown version format: $ver"
 fi
 
-futag=$ver-alt1
+futag=$ver-$rel
 [ -z "$force" ] && [ -n "$(git tag -l "$futag")" ] \
 	&& fatal "Future tag $futag already exists (--force to skip this check)."
 
@@ -540,7 +546,7 @@ else
 	append_changelog="- Update to $ver ($new_ver_date)."
 fi
 sed -i -E "s/^Version:.*/Version: $ver/" "$specfile"
-sed -i -E "s/^Release:.*/Release: alt1/" "$specfile"
+sed -i -E "s/^Release:.*/Release: $rel/" "$specfile"
 safe-add-changelog -e "$append_changelog" "$specfile"
 
 if grep -q '^tar:.*@version@' .gear/rules; then
