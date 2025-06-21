@@ -63,6 +63,7 @@ allow_test=
 allow_megacommit=
 revoke=
 task_deps=
+girar_user=
 while [ $# -gt 0 ]; do
 	opt=$1
 	arg=${opt#*=}
@@ -84,6 +85,7 @@ while [ $# -gt 0 ]; do
 		--e2k ) e2k=y ;;
 		--kernelbot | --kb) kernelbot=y ;;
 		--repo=*) branch=${opt#*=} ;;
+		--user=*) girar_user=${opt#*=} ;;
 		--dis* | --test ) disapprove=TEST ;;
 		--no-disa*) no_disapprove=y ;;
 		--revoke) revoke=y ;;
@@ -341,7 +343,7 @@ V git push "$gitery" "$tag" $force_remote
 
 # Determine target task number
 if [ -n "$task_id" ]; then
-	tasks_ls=$(ssh -n "$girar" task ls --brief --repo="$branch" 2>/dev/null)
+	tasks_ls=$(ssh -n "$girar" task ls --brief --repo="$branch" ${girar_user:+"--user=$girar_user"} 2>/dev/null)
 	task_matched=$(echo "$tasks_ls" | grep "^#$task_id " || :)
 	[ -n "$task_matched" ] || fatal "${RED}Requested task does not exist for $branch${NORM}"
 	echo >&2 "- Using existing task $task_id"
