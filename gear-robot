@@ -296,18 +296,27 @@ update_from_git_origin() {
 			V git commit $cleanup --no-edit -F "$msg"
 		elif ! V git merge $mergeopts --progress $cleanup $theirs --no-edit -F "$msg" "$tag"; then
 			if [ -t 0 ]; then
-				echo >&2
-				echo -e "\e[1;31m>>>>>>> This is merge failure shell. Merge will be aborted after exiting.\e[m" >&2
 				# Try manual merge if user is here.
-				# shellcheck disable=SC2016
-				GIT_PS1_SHOWCOLORHINTS=true \
-				GIT_PS1_SHOWDIRTYSTATE=true \
-				bash --rcfile <(
-					cat ~/.bashrc
-					echo . /usr/share/git-core/contrib/completion/git-prompt.sh
-					printf 'PS1=%q\n' '\w\[\033[1;35m\]$(__git_ps1)\[\033[m\]> '
-				) || :
-				(set -x; git merge --abort)
+				echo >&2
+				echo -e "\e[1;31m<<<<<<< This is merge failure shell. Merge will be aborted after exiting.\e[m" >&2
+				echo -e "\e[1;31m>>>>>>> Or resolve the conflict and it will be automatically continued.\e[m" >&2
+				while [ -e .git/MERGE_HEAD ]; do
+					# shellcheck disable=SC2016
+					GIT_PS1_SHOWCOLORHINTS=true \
+					GIT_PS1_SHOWDIRTYSTATE=true \
+					bash --rcfile <(
+						cat ~/.bashrc
+						echo . /usr/share/git-core/contrib/completion/git-prompt.sh
+						printf 'PS1=%q\n' '\w\[\033[1;35m\]$(__git_ps1)\[\033[m\]> '
+					) || :
+					if git diff --quiet; then
+						# Catch the error in case of another conflict.
+						(set -x; git merge --continue ||:)
+					else
+						echo >&2 "Conflict isn't resolved, aborting the merge."
+						(set -x; git merge --abort)
+					fi
+				done
 			fi
 		fi
 
