@@ -170,6 +170,7 @@ echo
 echo "%install"
 [ -e configure -o -e Makefile -o -e Makefile.in -o -e Makefile.am ] && echo "%makeinstall_std"
 [ -e CMakeLists.txt ] && echo "%cmake_install"
+[ -e Cargo.toml ] && echo "cargo install %_smp_mflags --offline --no-track --path ."
 [ -e Cargo.toml ] && echo "install -Dp target/release/%name -t %buildroot%_bindir"
 if [ -e go.mod ]; then
 	for i in $main; do
